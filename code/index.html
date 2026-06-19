@@ -498,7 +498,21 @@
                     <th class="px-3 py-2.5">Policyholder</th>
                     <th class="px-3 py-2.5 hidden sm:table-cell">Object</th>
                     <th class="px-3 py-2.5">Risk</th>
-                    <th class="px-3 py-span class="font-semibold text-slate-800 text-sm">Submitted Evidence</span>
+                    <th class="px-3 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="claimsTableBody" class="divide-y divide-slate-50"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Decision panel -->
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+              <span class="msymbol text-blue-600 text-xl">gavel</span>
+              <span class="font-semibold text-slate-800 text-sm">Decision &amp; Justification</span>
+            </div>
+            <div class="flex-1 p-4 flex flex-col gap-3span class="font-semibold text-slate-800 text-sm">Submitted Evidence</span>
               </div>
               <span id="selectedClaimIdBadge" class="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded-full font-semibold">No claim selected</span>
             </div>
