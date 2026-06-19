@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Ensure local modules inside code/ can be imported in serverless deployments
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import csv
 import json
 from fastapi import FastAPI, HTTPException
