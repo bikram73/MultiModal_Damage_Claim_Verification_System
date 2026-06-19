@@ -1,0 +1,117 @@
+# 🛡️ ClaimVision AI - Multi-Modal Claim Verification Suite
+
+ClaimVision AI is an enterprise-grade AI-powered claim verification platform designed to automate and streamline the first-level review of physical damage claims. By analyzing conversation transcripts, image files, policyholder history, and specific evidence rules, ClaimVision AI classifies claims into **Supported**, **Contradicted**, or **Not Enough Information** decisions in seconds.
+
+---
+
+## 🚀 Key Features
+
+* **🧠 Smart Claim Extraction:** Parses chat transcripts using conversational keywords and semantic cues to extract the target object, part, and claimed damage.
+* **📸 Multi-Modal Image Verification:** Uses OpenCV and Pillow to run physical image checks:
+  * *Blurry Images:* Variance of Laplacian blur check.
+  * *Low Light & Glare:* Average pixel brightness detection.
+  * *Prompt Injection / Fraud:* Optical Character Recognition (OCR via Pytesseract) checking for text note instructions attempting to override standard review.
+* **📏 Evidence Requirement Validation:** Checks claim variables against standard checklists (e.g. car glass visibility, package interior contents unboxing verification) from `evidence_requirements.csv`.
+* **📊 User History Risk Analyzer:** Cross-references the claimant's ID against historical claims in `user_history.csv` to compute an aggregated claimant risk profile.
+* **⚡ Dual-Mode Enterprise Dashboard:** A Stripe and Notion-inspired interface that runs in two configurations:
+  * **Dynamic (FastAPI) Mode:** Connects to a live FastAPI Python backend on port 8000 for running prediction strategies on the fly.
+  * **Static (Vercel) Mode:** Automatically falls back to loading pre-compiled `claims_data.json` statically, rendering all features without any backend requirements.
+
+---
+
+## 📂 Repository File Structure
+
+```text
+Modern_Enterprise_AI_Dashboard/
+├── vercel.json                         # Vercel static deployment routing config
+├── README.md                           # Main documentation file (You are here)
+├── AGENTS.md                           # Onboarding rules and chat log registry
+├── code/                               # Application source code
+│   ├── main.py                         # Command-line prediction engine runner
+│   ├── verification_engine.py          # Core claims classifier & image quality logic
+│   ├── dashboard_server.py             # FastAPI backend REST API server
+│   ├── index.html                      # Interactive Tailwind CSS dashboard template
+│   ├── generate_static_data.py         # Script compiling claims data to static JSON
+│   ├── claims_data.json                # Pre-compiled claims data for Vercel runs
+│   └── evaluation/
+│       ├── main.py                     # Evaluation script
+│       └── evaluation_report.md        # Compiled metrics comparison report
+└── dataset/                            # Input CSV files and image databases
+    ├── sample_claims.csv               # Ground-truth labeled samples
+    ├── claims.csv                      # Test input rows for prediction
+    ├── user_history.csv                # Claimant histories and flag indexes
+    ├── evidence_requirements.csv       # Minimum evidence checklists
+    └── images/
+        ├── sample/                     # Images referenced by sample_claims.csv
+        └── test/                       # Images referenced by claims.csv
+```
+
+---
+
+## 🛠️ Installation and Setup
+
+### Prerequisites
+Make sure you have **Python 3.10+** and `pip` installed on your machine.
+
+### 1. Clone the repository
+```bash
+git clone <your-repository-url>
+cd Modern_Enterprise_AI_Dashboard
+```
+
+### 2. Install dependencies
+Install the required packages using pip:
+```bash
+pip install fastapi uvicorn pillow opencv-python pytesseract numpy pydantic
+```
+*(Optional: Install `pytesseract` system binaries for image-to-text OCR check features).*
+
+---
+
+## 📖 How to Use
+
+### 1. Run predictions on test dataset
+Process `dataset/claims.csv` and write outputs in the exact required schema to `dataset/output.csv`:
+```bash
+python code/main.py [strategy]
+```
+*Available strategies:* `heuristic` (default), `vlm`
+
+### 2. Run system evaluations
+Compare strategies against labeled ground truth in `dataset/sample_claims.csv` and output accuracy metrics:
+```bash
+python code/evaluation/main.py
+```
+This generates the full [evaluation_report.md](code/evaluation/evaluation_report.md).
+
+### 3. Launch the dashboard server locally
+Start the local FastAPI development server:
+```bash
+python code/dashboard_server.py
+```
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser. You can:
+* Search/filter claims by ID, object, or user.
+* Click rows to dynamically update the images and AI findings details.
+* Switch prediction strategies and execute model runs.
+
+---
+
+## ☁️ GitHub & Vercel Deployment
+
+ClaimVision AI is pre-configured to be deployed as a static web app on Vercel without requiring a live Python runtime server.
+
+### Deploying to GitHub
+```bash
+git init
+git add .
+git commit -m "feat: implement ClaimVision AI system and dashboard"
+git branch -M main
+git remote add origin <your-github-repo-url>
+git push -u origin main
+```
+
+### Deploying to Vercel
+1. Log in to [Vercel](https://vercel.com) and click **Add New Project**.
+2. Import your GitHub repository.
+3. Vercel will automatically read `vercel.json` and deploy your dashboard.
+4. Open the deployed Vercel URL—the dashboard will load the pre-compiled `code/claims_data.json` database dynamically and render all metrics, images, and details correctly in the cloud!

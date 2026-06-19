@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/code/index.html" },
+    { "source": "/claims_data.json", "destination": "/code/claims_data.json" },
+    { "source": "/dataset/images/:path*", "destination": "/dataset/images/:path*" }
+  ]
+}
