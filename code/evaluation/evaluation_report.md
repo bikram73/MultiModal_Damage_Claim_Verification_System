@@ -6,9 +6,9 @@ Evaluation against `dataset/sample_claims.csv` using **real predictions** (no la
 
 | Strategy | Field | Accuracy | Macro Precision | Macro Recall | Macro F1 |
 |---|---|---|---|---|---|
-| Heuristic (Rule-based) | `claim_status` | 65.0% | 38.9% | 47.4% | 42.5% |
+| Heuristic (Rule-based) | `claim_status` | 60.0% | 32.7% | 44.9% | 37.8% |
 | Heuristic (Rule-based) | `issue_type` | 45.0% | 34.7% | 37.5% | 33.3% |
-| Heuristic (Rule-based) | `object_part` | 75.0% | 63.7% | 67.6% | 63.7% |
+| Heuristic (Rule-based) | `object_part` | 70.0% | 62.0% | 63.9% | 61.9% |
 
 ## 2. Per-Class Breakdown (Heuristic strategy)
 
@@ -17,14 +17,15 @@ Evaluation against `dataset/sample_claims.csv` using **real predictions** (no la
 | Class | Support | TP | FP | FN | Precision | Recall | F1 |
 |---|---|---|---|---|---|---|---|
 | contradicted | 5 | 0 | 0 | 5 | 0.0% | 0.0% | 0.0% |
-| not_enough_information | 2 | 1 | 1 | 1 | 50.0% | 50.0% | 50.0% |
-| supported | 13 | 12 | 6 | 1 | 66.7% | 92.3% | 77.4% |
+| not_enough_information | 2 | 1 | 2 | 1 | 33.3% | 50.0% | 40.0% |
+| supported | 13 | 11 | 6 | 2 | 64.7% | 84.6% | 73.3% |
 
-Misclassified (7):
+Misclassified (8):
 - row 4 (user_005): true=`contradicted` pred=`supported`
 - row 5 (user_006): true=`not_enough_information` pred=`supported`
 - row 7 (user_008): true=`contradicted` pred=`supported`
 - row 13 (user_020): true=`contradicted` pred=`supported`
+- row 15 (user_030): true=`supported` pred=`not_enough_information`
 - row 16 (user_031): true=`supported` pred=`not_enough_information`
 - row 18 (user_033): true=`contradicted` pred=`supported`
 - row 19 (user_034): true=`contradicted` pred=`supported`
@@ -63,36 +64,38 @@ Misclassified (11):
 
 | Class | Support | TP | FP | FN | Precision | Recall | F1 |
 |---|---|---|---|---|---|---|---|
-| contents | 1 | 1 | 2 | 0 | 33.3% | 100.0% | 50.0% |
+| box | 0 | 0 | 2 | 0 | 0.0% | 0.0% | 0.0% |
+| contents | 1 | 1 | 1 | 0 | 50.0% | 100.0% | 66.7% |
 | corner | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | door | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | front_bumper | 2 | 1 | 0 | 1 | 100.0% | 50.0% | 66.7% |
 | headlight | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | hinge | 1 | 0 | 0 | 1 | 0.0% | 0.0% | 0.0% |
 | hood | 0 | 0 | 1 | 0 | 0.0% | 0.0% | 0.0% |
-| keyboard | 1 | 0 | 0 | 1 | 0.0% | 0.0% | 0.0% |
+| keyboard | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | package_corner | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
-| package_side | 1 | 0 | 0 | 1 | 0.0% | 0.0% | 0.0% |
+| package_side | 1 | 0 | 1 | 1 | 0.0% | 0.0% | 0.0% |
 | rear_bumper | 2 | 2 | 0 | 0 | 100.0% | 100.0% | 100.0% |
-| screen | 2 | 2 | 2 | 0 | 50.0% | 100.0% | 66.7% |
-| seal | 2 | 2 | 0 | 0 | 100.0% | 100.0% | 100.0% |
+| screen | 2 | 2 | 1 | 0 | 66.7% | 100.0% | 80.0% |
+| seal | 2 | 0 | 0 | 2 | 0.0% | 0.0% | 0.0% |
 | side_mirror | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | trackpad | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 | unknown | 1 | 0 | 0 | 1 | 0.0% | 0.0% | 0.0% |
 | windshield | 1 | 1 | 0 | 0 | 100.0% | 100.0% | 100.0% |
 
-Misclassified (5):
+Misclassified (6):
 - row 7 (user_008): true=`front_bumper` pred=`hood`
 - row 9 (user_010): true=`hinge` pred=`screen`
-- row 10 (user_011): true=`keyboard` pred=`screen`
-- row 16 (user_031): true=`package_side` pred=`contents`
-- row 18 (user_033): true=`unknown` pred=`contents`
+- row 15 (user_030): true=`seal` pred=`contents`
+- row 16 (user_031): true=`package_side` pred=`box`
+- row 18 (user_033): true=`unknown` pred=`package_side`
+- row 19 (user_034): true=`seal` pred=`box`
 
 ## 3. Operational Analysis
 
 ### Execution Latency
 
-- **Heuristic (Rule-based):** 10417.1 ms total (520.85 ms / claim)
+- **Heuristic (Rule-based):** 8562.0 ms total (428.10 ms / claim)
 - Real GPT-4o API latency (estimated): ~1.5 – 3 s / claim
 
 ### Model Calls and Token Usage (GPT-4o)

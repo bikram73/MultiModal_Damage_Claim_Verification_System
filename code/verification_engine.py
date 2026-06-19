@@ -299,67 +299,74 @@ class VerificationEngine:
         # Use the last customer utterance as the primary signal for part/issue
         focus = self._last_customer_line(row['user_claim'])
 
-        # ── object_part ────────────────────────────────────────────────
-        part = 'unknown'
-        if claim_object == 'car':
-            if 'front bumper' in text:                              part = 'front_bumper'
-            elif 'rear bumper' in text or 'back bumper' in text \
-                 or 'parachoques trasero' in text \
-                 or 'parachoques de atras' in text:                 part = 'rear_bumper'
-            elif 'bumper' in text:
-                part = 'front_bumper' if 'front' in text else 'rear_bumper'
-            elif 'windshield' in text or 'front glass' in text:    part = 'windshield'
-            elif 'headlight' in text or 'head light' in text:      part = 'headlight'
-            elif 'taillight' in text or 'tail light' in text \
-                 or 'back light' in text:                           part = 'taillight'
-            elif 'side mirror' in text or 'mirror' in text:        part = 'side_mirror'
-            elif 'door' in text:                                    part = 'door'
-            elif 'hood' in text:                                    part = 'hood'
-            elif 'fender' in text:                                  part = 'fender'
-            elif 'quarter panel' in text:                           part = 'quarter_panel'
-            elif 'body' in text:                                    part = 'body'
-        elif claim_object == 'laptop':
-            if 'screen' in text or 'pantalla' in text or 'display' in text: part = 'screen'
-            elif 'keyboard' in text or 'teclas' in text \
-                 or 'keycap' in text or 'keys' in text:             part = 'keyboard'
-            elif 'trackpad' in text or 'palm-rest' in text \
-                 or 'palm rest' in text:                            part = 'trackpad'
-            elif 'hinge' in text:                                   part = 'hinge'
-            elif 'lid' in text:                                     part = 'lid'
-            elif 'corner' in text:                                  part = 'corner'
-            elif 'port' in text:                                    part = 'port'
-            elif 'base' in text:                                    part = 'base'
-            elif 'body' in text or 'outer body' in text \
-                 or 'side edge' in text:                            part = 'body'
-        elif claim_object == 'package':
-            if 'corner' in text:                                    part = 'package_corner'
-            elif 'seal' in text or 'flap' in text:                 part = 'seal'
-            elif 'label' in text:                                   part = 'label'
-            elif any(w in text for w in ['contents','product inside','item inside']):
-                                                                    part = 'contents'
-            elif 'missing' in text and any(w in text for w in ['product','item','inside']):
-                                                                    part = 'contents'
-            elif 'side' in text:                                    part = 'package_side'
-            elif any(w in text for w in ['box','cardboard','package','parcel']):
-                                                                    part = 'box'
+        # ── object_part — check last customer line first, fall back to full text ──
+        def detect_part(t):
+            if claim_object == 'car':
+                if 'front bumper' in t:                                  return 'front_bumper'
+                if 'rear bumper' in t or 'back bumper' in t \
+                   or 'parachoques trasero' in t \
+                   or 'parachoques de atras' in t:                       return 'rear_bumper'
+                if 'bumper' in t:
+                    return 'front_bumper' if 'front' in t else 'rear_bumper'
+                if 'windshield' in t or 'front glass' in t:              return 'windshield'
+                if 'headlight' in t or 'head light' in t:                return 'headlight'
+                if 'taillight' in t or 'tail light' in t \
+                   or 'back light' in t:                                  return 'taillight'
+                if 'side mirror' in t or 'mirror' in t:                  return 'side_mirror'
+                if 'door' in t:                                           return 'door'
+                if 'hood' in t:                                           return 'hood'
+                if 'fender' in t:                                         return 'fender'
+                if 'quarter panel' in t:                                  return 'quarter_panel'
+                if 'body' in t:                                           return 'body'
+            elif claim_object == 'laptop':
+                if 'trackpad' in t or 'palm-rest' in t \
+                   or 'palm rest' in t:                                   return 'trackpad'
+                if 'screen' in t or 'pantalla' in t or 'display' in t:   return 'screen'
+                if 'keyboard' in t or 'teclas' in t \
+                   or 'keycap' in t or 'keys' in t:                      return 'keyboard'
+                if 'hinge' in t:                                          return 'hinge'
+                if 'lid' in t:                                            return 'lid'
+                if 'corner' in t:                                         return 'corner'
+                if 'port' in t:                                           return 'port'
+                if 'base' in t:                                           return 'base'
+                if 'body' in t or 'outer body' in t \
+                   or 'side edge' in t:                                   return 'body'
+            elif claim_object == 'package':
+                if 'corner' in t:                                         return 'package_corner'
+                if 'seal' in t or 'flap' in t:                           return 'seal'
+                if 'label' in t:                                          return 'label'
+                if any(w in t for w in ['contents', 'product inside', 'item inside']):
+                                                                          return 'contents'
+                if 'missing' in t and any(w in t for w in ['product', 'item', 'inside']):
+                                                                          return 'contents'
+                if 'side' in t:                                           return 'package_side'
+                if any(w in t for w in ['box', 'cardboard', 'package', 'parcel']):
+                                                                          return 'box'
+            return None
 
-        # ── issue_type ─────────────────────────────────────────────────
-        issue = 'unknown'
-        if 'shattered' in text or 'shatter' in text:               issue = 'glass_shatter'
-        elif 'crack' in text or 'cracked' in text or 'raja' in text: issue = 'crack'
-        elif any(w in text for w in ['scratch','scratched','scrape','mark']):
-                                                                    issue = 'scratch'
-        elif 'dent' in text or 'dented' in text or 'dab' in text:  issue = 'dent'
-        elif 'missing' in text or 'faltan' in text:                issue = 'missing_part'
-        elif any(w in text for w in ['broken','broke','toot gaya','toot']):
-                                                                    issue = 'broken_part'
-        elif 'torn' in text or 'phati' in text:                    issue = 'torn_packaging'
-        elif 'crushed' in text or 'crush' in text:                 issue = 'crushed_packaging'
-        elif any(w in text for w in ['water','wet','spill','liquid','coffee']):
-                                                                    issue = 'water_damage'
-        elif 'stain' in text or 'oily' in text or 'oil' in text:  issue = 'stain'
-        elif 'hail' in text:                                        issue = 'dent'
-        elif 'normal' in text:                                      issue = 'none'
+        part = detect_part(focus) or detect_part(text) or 'unknown'
+
+        # ── issue_type — last customer line first, fall back to full text ──
+        def detect_issue(t):
+            if 'shattered' in t or 'shatter' in t:                      return 'glass_shatter'
+            if 'crack' in t or 'cracked' in t or 'raja' in t:           return 'crack'
+            if any(w in t for w in ['scratch', 'scratched', 'scrape', 'mark']):
+                                                                          return 'scratch'
+            if 'dent' in t or 'dented' in t or 'dab' in t:              return 'dent'
+            # water/liquid before missing so "keyboard liquid damage" → water_damage
+            if any(w in t for w in ['water', 'wet', 'spill', 'liquid', 'coffee']):
+                                                                          return 'water_damage'
+            if 'stain' in t or 'oily' in t or 'oil' in t:               return 'stain'
+            if 'missing' in t or 'faltan' in t:                          return 'missing_part'
+            if any(w in t for w in ['broken', 'broke', 'toot gaya', 'toot']):
+                                                                          return 'broken_part'
+            if 'torn' in t or 'phati' in t:                              return 'torn_packaging'
+            if 'crushed' in t or 'crush' in t:                           return 'crushed_packaging'
+            if 'hail' in t:                                               return 'dent'
+            if 'normal' in t:                                             return 'none'
+            return None
+
+        issue = detect_issue(focus) or detect_issue(text) or 'unknown'
 
         # ── image quality ──────────────────────────────────────────────
         image_paths = [p.strip() for p in row['image_paths'].split(';')]
