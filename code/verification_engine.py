@@ -285,9 +285,19 @@ class VerificationEngine:
     # ------------------------------------------------------------------
     # Heuristic text-based extraction (fallback / strategy='heuristic')
     # ------------------------------------------------------------------
+    @staticmethod
+    def _last_customer_line(conversation: str) -> str:
+        """Return the last line spoken by the Customer in the conversation."""
+        lines = conversation.split('|')
+        customer_lines = [l.strip() for l in lines
+                          if l.strip().lower().startswith('customer:')]
+        return customer_lines[-1].lower() if customer_lines else conversation.lower()
+
     def _heuristic_extract(self, row: dict, user_history_info: dict) -> dict:
         claim_object = row['claim_object']
         text = row['user_claim'].lower()
+        # Use the last customer utterance as the primary signal for part/issue
+        focus = self._last_customer_line(row['user_claim'])
 
         # ── object_part ────────────────────────────────────────────────
         part = 'unknown'

@@ -1,146 +1,206 @@
+"""
+Evaluation script — runs predictions on sample_claims.csv using the
+heuristic strategy (no sample-cache lookup) and reports real metrics.
+"""
 import os
 import csv
 import sys
 import time
 
-# Ensure we can import from code/
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from verification_engine import VerificationEngine
 
+
+# ---------------------------------------------------------------------------
+# Metrics helpers
+# ---------------------------------------------------------------------------
 def calculate_metrics(y_true, y_pred):
-    """
-    Calculate precision, recall, F1, and accuracy for list of values.
-    """
-    correct = sum(1 for t, p in zip(y_true, y_pred) if t == p)
+    correct = sum(t == p for t, p in zip(y_true, y_pred))
     accuracy = correct / len(y_true) if y_true else 0.0
-    
-    # Calculate macro precision, recall, F1
+
     classes = list(set(y_true + y_pred))
     precisions, recalls, f1s = [], [], []
-    
     for c in classes:
-        tp = sum(1 for t, p in zip(y_true, y_pred) if t == c and p == c)
-        fp = sum(1 for t, p in zip(y_true, y_pred) if t != c and p == c)
-        fn = sum(1 for t, p in zip(y_true, y_pred) if t == c and p != c)
-        
+        tp = sum(t == c and p == c for t, p in zip(y_true, y_pred))
+        fp = sum(t != c and p == c for t, p in zip(y_true, y_pred))
+        fn = sum(t == c and p != c for t, p in zip(y_true, y_pred))
         prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
-        
+        rec  = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1   = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
         precisions.append(prec)
         recalls.append(rec)
         f1s.append(f1)
-        
-    macro_precision = sum(precisions) / len(classes) if classes else 0.0
-    macro_recall = sum(recalls) / len(classes) if classes else 0.0
-    macro_f1 = sum(f1s) / len(classes) if classes else 0.0
-    
+
     return {
-        'accuracy': accuracy,
-        'precision': macro_precision,
-        'recall': macro_recall,
-        'f1': macro_f1
+        'accuracy':  accuracy,
+        'precision': sum(precisions) / len(classes) if classes else 0.0,
+        'recall':    sum(recalls)    / len(classes) if classes else 0.0,
+        'f1':        sum(f1s)        / len(classes) if classes else 0.0,
     }
 
+
+def per_class_breakdown(y_true, y_pred):
+    classes = sorted(set(y_true + y_pred))
+    rows = []
+    for c in classes:
+        tp = sum(t == c and p == c for t, p in zip(y_true, y_pred))
+        fp = sum(t != c and p == c for t, p in zip(y_true, y_pred))
+        fn = sum(t == c and p != c for t, p in zip(y_true, y_pred))
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        rec  = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1   = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+        rows.append((c, tp + fn, tp, fp, fn, prec, rec, f1))
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Main evaluation
+# ---------------------------------------------------------------------------
 def run_evaluation():
     workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sample_csv_path = os.path.join(workspace_root, 'dataset', 'sample_claims.csv')
-    
+
     if not os.path.exists(sample_csv_path):
         print(f"Error: {sample_csv_path} not found.")
         return
-        
+
     engine = VerificationEngine(workspace_root)
-    
-    # Load true labels
+
     sample_rows = []
     with open(sample_csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            sample_rows.append(r)
-            
-    print(f"Loaded {len(sample_rows)} sample claims for evaluation.")
-    
-    # Run evaluation for Heuristic Strategy
-    t0 = time.time()
-    heuristic_preds = []
-    for r in sample_rows:
-        pred = engine.predict_row(r, strategy='heuristic')
-        heuristic_preds.append(pred)
-    heuristic_time = time.time() - t0
-    
-    # Run evaluation for AI Prompting Strategy (Mocked for evaluation baseline)
-    t0 = time.time()
-    vlm_preds = []
-    for r in sample_rows:
-        pred = engine.predict_row(r, strategy='vlm')
-        vlm_preds.append(pred)
-    vlm_time = time.time() - t0
+        for row in csv.DictReader(f):
+            sample_rows.append(row)
 
-    # Extract fields for metric calculation
-    fields_to_eval = ['claim_status', 'issue_type', 'object_part']
+    print(f"Loaded {len(sample_rows)} sample claims.")
+
+    # ── Heuristic strategy ─────────────────────────────────────────────
+    t0 = time.time()
+    heuristic_preds = [engine.predict_row(r, strategy='heuristic') for r in sample_rows]
+    heuristic_time  = time.time() - t0
+
+    # ── VLM strategy (only if OPENAI_API_KEY is set) ───────────────────
+    vlm_preds = None
+    vlm_time  = None
+    api_key   = os.environ.get('OPENAI_API_KEY', '')
+    if api_key:
+        print("OPENAI_API_KEY found — running VLM evaluation …")
+        t0 = time.time()
+        vlm_preds = [engine.predict_row(r, strategy='vlm') for r in sample_rows]
+        vlm_time  = time.time() - t0
+    else:
+        print("OPENAI_API_KEY not set — skipping VLM evaluation.")
+
+    # ── Compute metrics ────────────────────────────────────────────────
+    fields = ['claim_status', 'issue_type', 'object_part']
+    strategies = [('Heuristic (Rule-based)', heuristic_preds, heuristic_time)]
+    if vlm_preds:
+        strategies.append(('VLM (GPT-4o)', vlm_preds, vlm_time))
+
     results = {}
-    
-    for strategy, preds in [('Heuristic (Rule-based)', heuristic_preds), ('VLM (AI Prompting)', vlm_preds)]:
-        results[strategy] = {}
-        for field in fields_to_eval:
-            y_true = [row[field] for row in sample_rows]
+    for label, preds, _ in strategies:
+        results[label] = {}
+        for field in fields:
+            y_true = [r[field] for r in sample_rows]
             y_pred = [p[field] for p in preds]
-            metrics = calculate_metrics(y_true, y_pred)
-            results[strategy][field] = metrics
-            
-    # Write evaluation report
-    report_dir = os.path.dirname(os.path.abspath(__file__))
+            results[label][field] = {
+                'metrics':    calculate_metrics(y_true, y_pred),
+                'breakdown':  per_class_breakdown(y_true, y_pred),
+                'y_true':     y_true,
+                'y_pred':     y_pred,
+            }
+
+    # Count images
+    image_count = sum(
+        len(r['image_paths'].split(';')) for r in sample_rows
+    )
+
+    # ── Write report ───────────────────────────────────────────────────
+    report_dir  = os.path.dirname(os.path.abspath(__file__))
     report_path = os.path.join(report_dir, 'evaluation_report.md')
-    
+
+    n_sample = len(sample_rows)
+    n_test   = 45  # approximate claims.csv size
+
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write("# ClaimAI System Evaluation Report\n\n")
-        f.write("This report evaluates the accuracy, operational parameters, and resource costs of the **ClaimAI** Claim Verification system on the `sample_claims.csv` dataset.\n\n")
-        
-        f.write("## 1. Strategy Comparisons\n\n")
-        f.write("We compare two processing strategies:\n")
-        f.write("1. **Strategy A (Heuristic Rule-based):** Combines metadata mapping, fast keyword parsing from conversations, and explicit image validation.\n")
-        f.write("2. **Strategy B (AI VLM Prompting):** Leverages advanced visual language prompts (fallback simulated offline when API is not present).\n\n")
-        
-        # Write tables
-        f.write("### Accuracy Metrics Table\n\n")
-        f.write("| Strategy | Evaluated Field | Accuracy | Macro Precision | Macro Recall | Macro F1-Score |\n")
+        f.write("Evaluation against `dataset/sample_claims.csv` using **real predictions** ")
+        f.write("(no label cache — predictions generated fresh for every row).\n\n")
+
+        # ── Metrics tables ─────────────────────────────────────────────
+        f.write("## 1. Accuracy Metrics\n\n")
+        f.write("| Strategy | Field | Accuracy | Macro Precision | Macro Recall | Macro F1 |\n")
         f.write("|---|---|---|---|---|---|\n")
-        for strategy, fields in results.items():
-            for field, metrics in fields.items():
-                f.write(f"| {strategy} | `{field}` | {metrics['accuracy']:.2%} | {metrics['precision']:.2%} | {metrics['recall']:.2%} | {metrics['f1']:.2%} |\n")
+        for label, field_results in results.items():
+            for field, data in field_results.items():
+                m = data['metrics']
+                f.write(f"| {label} | `{field}` | {m['accuracy']:.1%} | "
+                        f"{m['precision']:.1%} | {m['recall']:.1%} | {m['f1']:.1%} |\n")
         f.write("\n")
-        
-        f.write("## 2. Operational Analysis\n\n")
-        f.write("### Resource and Execution Metrics\n\n")
-        
-        # Estimates for test processing (45 claims)
-        test_claims_count = 45
-        images_count = 72 # approximate number of images in dataset
-        
-        f.write(f"- **Approximate number of VLM API calls:**\n")
-        f.write(f"  - Sample Processing (21 claims): 21 calls\n")
-        f.write(f"  - Test Processing (45 claims): 45 calls\n")
-        f.write(f"- **Estimated input/output token usage (Gemini 2.5 Flash):**\n")
-        f.write(f"  - Input Tokens per claim (text + image): ~4,500 tokens\n")
-        f.write(f"  - Output Tokens per claim: ~250 tokens\n")
-        f.write(f"  - Total Test Set Tokens: ~213,750 tokens\n")
-        f.write(f"- **Images processed:** {images_count} test images\n")
-        f.write(f"- **Cost Analysis (pricing assumptions: Input $0.000075 / 1k, Output $0.0003 / 1k):**\n")
-        f.write(f"  - Total cost for sample run: ~$0.01\n")
-        f.write(f"  - Total cost for test run: ~$0.03\n")
-        f.write(f"- **Execution Latency:**\n")
-        f.write(f"  - Heuristic Strategy: {heuristic_time * 1000:.2f} ms total (~{heuristic_time / len(sample_rows) * 1000:.2f} ms/claim)\n")
-        f.write(f"  - VLM Strategy (Mocked/Simulated offline): {vlm_time * 1000:.2f} ms total\n")
-        f.write(f"  - Real VLM API Latency (Estimated): ~1.8 seconds per claim\n\n")
-        
-        f.write("### Rate Limits and Throttling Strategy\n")
-        f.write("To prevent hitting rate limits (e.g. 15 RPM for free tiers, 1000 RPM for paid tiers):\n")
-        f.write("1. **Parallel Execution with Throttling:** Requests are throttled using Python's asyncio Semaphore to process 5 claims concurrently.\n")
-        f.write("2. **Exponential Backoff:** If the API encounters a 429 Rate Limit error, the client retries with an exponential delay (2s, 4s, 8s).\n")
-        f.write("3. **Local Response Caching:** Deduplicates identical claims (user_id + claim text) to avoid repeated API requests.\n")
-        
-    print(f"Successfully generated evaluation report at {report_path}.")
+
+        # ── Per-class breakdown for heuristic ─────────────────────────
+        f.write("## 2. Per-Class Breakdown (Heuristic strategy)\n\n")
+        for field in fields:
+            data = results['Heuristic (Rule-based)'][field]
+            f.write(f"### `{field}`\n\n")
+            f.write("| Class | Support | TP | FP | FN | Precision | Recall | F1 |\n")
+            f.write("|---|---|---|---|---|---|---|---|\n")
+            for row_data in data['breakdown']:
+                c, sup, tp, fp, fn, prec, rec, f1 = row_data
+                f.write(f"| {c} | {sup} | {tp} | {fp} | {fn} | "
+                        f"{prec:.1%} | {rec:.1%} | {f1:.1%} |\n")
+            # Wrong predictions list
+            wrongs = [(i, t, p) for i, (t, p) in enumerate(
+                zip(data['y_true'], data['y_pred'])) if t != p]
+            if wrongs:
+                f.write(f"\nMisclassified ({len(wrongs)}):\n")
+                for i, true_val, pred_val in wrongs:
+                    uid = sample_rows[i]['user_id']
+                    f.write(f"- row {i} ({uid}): true=`{true_val}` pred=`{pred_val}`\n")
+            f.write("\n")
+
+        # ── Operational analysis ───────────────────────────────────────
+        f.write("## 3. Operational Analysis\n\n")
+        f.write("### Execution Latency\n\n")
+        for label, _, elapsed in strategies:
+            if elapsed is not None:
+                per_claim = elapsed / n_sample * 1000
+                f.write(f"- **{label}:** {elapsed*1000:.1f} ms total "
+                        f"({per_claim:.2f} ms / claim)\n")
+        f.write(f"- Real GPT-4o API latency (estimated): ~1.5 – 3 s / claim\n\n")
+
+        f.write("### Model Calls and Token Usage (GPT-4o)\n\n")
+        f.write(f"| Run | Claims | Images | API calls | Est. input tokens | Est. output tokens | Est. total cost |\n")
+        f.write("|---|---|---|---|---|---|---|\n")
+        sample_imgs = image_count
+        test_imgs   = 72
+        # ~1000 text tokens + ~765 tokens per image (high-detail tile estimate)
+        in_per_sample  = n_sample  * (1000 + sample_imgs  // n_sample  * 765)
+        in_per_test    = n_test    * (1000 + test_imgs     // n_test    * 765)
+        out_per_sample = n_sample  * 300
+        out_per_test   = n_test    * 300
+        # GPT-4o pricing (as of 2025-06): $5/1M input, $15/1M output
+        cost_s = in_per_sample * 5e-6 + out_per_sample * 15e-6
+        cost_t = in_per_test   * 5e-6 + out_per_test   * 15e-6
+        f.write(f"| Sample | {n_sample} | {sample_imgs} | {n_sample} | "
+                f"~{in_per_sample:,} | ~{out_per_sample:,} | ~${cost_s:.3f} |\n")
+        f.write(f"| Test   | {n_test}   | {test_imgs}   | {n_test}   | "
+                f"~{in_per_test:,} | ~{out_per_test:,} | ~${cost_t:.3f} |\n")
+        f.write("\nPricing assumptions: GPT-4o at $5.00 / 1M input tokens, $15.00 / 1M output tokens.\n\n")
+
+        f.write("### Rate Limits and Resilience\n\n")
+        f.write("- GPT-4o tier-1 limits: 500 RPM / 30,000 TPM (free) up to 10,000 RPM / 2M TPM (paid).\n")
+        f.write("- Strategy: sequential calls with exponential backoff on HTTP 429.\n")
+        f.write("- Caching: identical (user_id + claim text) pairs de-duplicated before calling the API.\n")
+        f.write("- Images are base64-encoded inline (no external URLs), avoiding storage side-effects.\n")
+        f.write("- Heuristic strategy is always available as a zero-cost, zero-latency fallback.\n\n")
+
+        f.write("### Batching and Throughput\n\n")
+        f.write("- All images for a single claim are sent in one API call (multi-image content array).\n")
+        f.write("- For large runs, an asyncio semaphore (5 concurrent) is recommended.\n")
+        f.write("- At 5 RPM concurrent, the 45-row test set completes in ~14 seconds wall-clock.\n")
+
+    print(f"Evaluation report written to {report_path}")
+
 
 if __name__ == '__main__':
     run_evaluation()
