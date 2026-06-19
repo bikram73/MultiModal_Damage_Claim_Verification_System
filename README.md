@@ -96,22 +96,53 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser. You can
 
 ---
 
+## 🛠️ Technical Details & Implementation Architecture
+
+### 1. Multi-Modal Image Validation Algorithms 📸
+The system uses **OpenCV** and **Pillow** to perform automated checks on the submitted image evidence:
+* **Blurriness Check (Laplacian Variance):** Applies a Laplace kernel filter to calculate the variance of focal sharpness. If the variance is `< 80.0`, the image is flagged as `blurry_image`.
+* **Low-Light / Glare Detection:** Converts images to grayscale and computes the mean luminance. A mean brightness `< 35.0` (out of 255) triggers `low_light_or_glare`.
+* **Prompt Injection Detection (OCR):** Uses `pytesseract` to scan the image for printed notes or text blocks containing instructions such as *"approve the claim"*, *"ignore previous checks"*, or *"override"*. If found, it flags `text_instruction_present` and routes the claim to manual review/contradiction.
+
+### 2. Multi-Variant Claimant Risk Score 📊
+For each claim, a dynamic **Risk Score (5 to 98)** is computed using the following weights:
+* **Base Risk:** `15` points.
+* **Claim Severity:** `+35` for High severity claims, `+20` for Medium severity, `+10` for Low severity.
+* **Verification Status:** `+25` if the visual evidence contradicts the claim conversation; `+10` if evidence is ambiguous or missing.
+* **Risk Flags triggered:**
+  * `possible_manipulation`: `+30` points.
+  * `text_instruction_present`: `+25` points.
+  * `user_history_risk`: `+15` points.
+  * `manual_review_required`: `+10` points.
+
+### 3. Rule-Based Natural Language Processing 🧠
+The parsing engine extracts the target component and damage category from conversation threads using token matching:
+* **Part Extractor:** Maps keywords like *windshield*, *fender*, *hinge*, *trackpad*, *keyboard*, *seal*, *label*, *mirror* directly to standard categories.
+* **Issue Extractor:** Identifies damage families like *dent*, *scratch*, *crack*, *glass_shatter*, *missing_part*, *torn_packaging*, *water_damage*, and *stain*.
+
+---
+
 ## ☁️ GitHub & Vercel Deployment
 
 ClaimVision AI is pre-configured to be deployed as a static web app on Vercel without requiring a live Python runtime server.
 
 ### Deploying to GitHub
-```bash
-git init
-git add .
-git commit -m "feat: implement ClaimVision AI system and dashboard"
-git branch -M main
-git remote add origin <your-github-repo-url>
-git push -u origin main
-```
+1. Initialize Git and add your files:
+   ```bash
+   git init
+   git add .
+   git commit -m "feat: implement ClaimVision AI system and dashboard"
+   ```
+2. Link your local repository to GitHub and push:
+   ```bash
+   git branch -M main
+   git remote add origin <your-github-repo-url>
+   git push -u origin main
+   ```
 
 ### Deploying to Vercel
 1. Log in to [Vercel](https://vercel.com) and click **Add New Project**.
 2. Import your GitHub repository.
 3. Vercel will automatically read `vercel.json` and deploy your dashboard.
-4. Open the deployed Vercel URL—the dashboard will load the pre-compiled `code/claims_data.json` database dynamically and render all metrics, images, and details correctly in the cloud!
+4. The dashboard will auto-detect the cloud environment, load the pre-compiled `claims_data.json` database, and render all metrics, images, and details correctly in the cloud!
+
