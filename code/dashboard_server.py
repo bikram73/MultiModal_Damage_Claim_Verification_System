@@ -78,12 +78,48 @@ def compute_risk_score(pred):
         
     return min(98, max(5, score))
 
+def load_user_history():
+    """Load the full user_history.csv into a dict keyed by user_id."""
+    history_path = os.path.join(WORKSPACE_ROOT, 'dataset', 'user_history.csv')
+    history = {}
+    if os.path.exists(history_path):
+        with open(history_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                history[row['user_id']] = {
+                    'past_claim_count': int(row.get('past_claim_count', 0)),
+                    'accept_claim': int(row.get('accept_claim', 0)),
+                    'manual_review_claim': int(row.get('manual_review_claim', 0)),
+                    'rejected_claim': int(row.get('rejected_claim', 0)),
+                    'last_90_days_claim_count': int(row.get('last_90_days_claim_count', 0)),
+                    'history_flags': row.get('history_flags', 'none'),
+                    'history_summary': row.get('history_summary', 'No prior claim history'),
+                }
+    return history
+
+def load_evidence_requirements():
+    """Load the evidence_requirements.csv for display."""
+    req_path = os.path.join(WORKSPACE_ROOT, 'dataset', 'evidence_requirements.csv')
+    reqs = []
+    if os.path.exists(req_path):
+        with open(req_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                reqs.append({
+                    'requirement_id': row['requirement_id'],
+                    'claim_object': row['claim_object'],
+                    'applies_to': row['applies_to'],
+                    'minimum_image_evidence': row['minimum_image_evidence'],
+                })
+    return reqs
+
 def load_data():
     claims_path = os.path.join(WORKSPACE_ROOT, 'dataset', 'claims.csv')
     sample_path = os.path.join(WORKSPACE_ROOT, 'dataset', 'sample_claims.csv')
     output_path = os.path.join(WORKSPACE_ROOT, 'dataset', 'output.csv')
     
     claims = []
+    user_history = load_user_history()
     
     # Load outputs predictions map
     output_map = {}
@@ -118,6 +154,20 @@ def load_data():
             policyholder = NAMES.get(row['user_id'], f"Policyholder {row['user_id']}")
             risk_score = compute_risk_score(pred)
             
+            # Get user history for this user
+            hist = user_history.get(row['user_id'], {
+                'past_claim_count': 0,
+                'accept_claim': 0,
+                'manual_review_claim': 0,
+                'rejected_claim': 0,
+                'last_90_days_claim_count': 0,
+                'history_flags': 'none',
+                'history_summary': 'No prior claim history',
+            })
+
+            # Extract supporting image IDs
+            supporting_ids = pred.get('supporting_image_ids', 'none')
+            
             claims.append({
                 'claim_id': claim_id,
                 'user_id': row['user_id'],
@@ -132,11 +182,13 @@ def load_data():
                 'object_part': pred.get('object_part', 'unknown'),
                 'claim_status': pred.get('claim_status', 'supported'),
                 'claim_status_justification': pred.get('claim_status_justification', ''),
-                'supporting_image_ids': pred.get('supporting_image_ids', 'none').split(';'),
+                'supporting_image_ids': supporting_ids.split(';') if supporting_ids != 'none' else [],
                 'valid_image': pred.get('valid_image', 'true'),
                 'severity': pred.get('severity', 'medium'),
                 'risk_score': risk_score,
-                'source': 'test'
+                'source': 'test',
+                # User history fields
+                'user_history': hist,
             })
             
     # Also load sample claims as a background review source
@@ -146,6 +198,19 @@ def load_data():
             claim_id = f"CLM-S{2000 + idx}"
             policyholder = NAMES.get(row['user_id'], f"Policyholder {row['user_id']}")
             risk_score = compute_risk_score(row)
+            
+            # Get user history for this user
+            hist = user_history.get(row['user_id'], {
+                'past_claim_count': 0,
+                'accept_claim': 0,
+                'manual_review_claim': 0,
+                'rejected_claim': 0,
+                'last_90_days_claim_count': 0,
+                'history_flags': 'none',
+                'history_summary': 'No prior claim history',
+            })
+
+            supporting_ids = row.get('supporting_image_ids', 'none')
             
             claims.append({
                 'claim_id': claim_id,
@@ -161,11 +226,13 @@ def load_data():
                 'object_part': row.get('object_part', 'unknown'),
                 'claim_status': row.get('claim_status', 'supported'),
                 'claim_status_justification': row.get('claim_status_justification', ''),
-                'supporting_image_ids': row.get('supporting_image_ids', 'none').split(';'),
+                'supporting_image_ids': supporting_ids.split(';') if supporting_ids != 'none' else [],
                 'valid_image': row.get('valid_image', 'true'),
                 'severity': row.get('severity', 'medium'),
                 'risk_score': risk_score,
-                'source': 'sample'
+                'source': 'sample',
+                # User history fields
+                'user_history': hist,
             })
             
     return claims
@@ -196,6 +263,27 @@ def get_metrics():
         'contradicted': contradicted,
         'manual_review': manual_review
     }
+
+@app.get("/api/user_history/{user_id}")
+def get_user_history(user_id: str):
+    """Return full user history for a given user_id."""
+    history = load_user_history()
+    if user_id in history:
+        return history[user_id]
+    return {
+        'past_claim_count': 0,
+        'accept_claim': 0,
+        'manual_review_claim': 0,
+        'rejected_claim': 0,
+        'last_90_days_claim_count': 0,
+        'history_flags': 'none',
+        'history_summary': 'No prior claim history',
+    }
+
+@app.get("/api/evidence_requirements")
+def get_evidence_requirements():
+    """Return all evidence requirements from the CSV."""
+    return load_evidence_requirements()
 
 @app.post("/api/run")
 def run_model(config: RunConfig):
