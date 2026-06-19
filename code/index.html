@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ClaimAI | Multi-Modal Evidence Review</title>
+  <meta name="description" content="AI-powered multi-modal damage claim verification system using images, conversations, user history and evidence requirements."/>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -36,83 +37,717 @@
     /* Spinner */
     @keyframes spin{to{transform:rotate(360deg)}}
     .spinner{animation:spin .7s linear infinite;}
-    /* Mobile sidebar overlay */
-    #sidebarOverlay{display:none;}
+    /* Pulse */
+    @keyframes pulse-slow{0%,100%{opacity:.6}50%{opacity:.2}}
+    .pulse-slow{animation:pulse-slow 3s ease-in-out infinite;}
+    /* Sidebar overlay (mobile) */
+    #sidebarOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35;}
     #sidebarOverlay.open{display:block;}
-    /* Sidebar off-canvas on mobile */
+    /* Sidebar off-canvas (mobile) */
     @media(max-width:767px){
-      #dashSidebar{position:fixed;left:-260px;top:0;height:100%;z-index:40;transition:left .25s ease;}
-      #dashSidebar.open{left:0;}
+      #dashSidebar{position:fixed;left:-260px;top:0;height:100%;z-index:40;transition:left .25s ease;box-shadow:none;}
+      #dashSidebar.open{left:0;box-shadow:4px 0 24px rgba(0,0,0,.15);}
       #dashMain{margin-left:0!important;}
     }
-    /* Topbar strategy wrap on small screens */
-    @media(max-width:639px){
-      #strategyBar{display:none;}
-      #strategyBar.mobile-open{display:flex;}
+    /* Detail panel mobile */
+    @media(max-width:1023px){
+      #detailPanel{position:fixed;inset:0;z-index:45;transform:translateX(100%);transition:transform .3s ease;}
+      #detailPanel.open{transform:translateX(0);}
     }
+    /* Print */
+    @media print{.no-print{display:none!important;}}
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
-VLM</option>
+
+<!-- ═══════════════════════════════════════════════════
+     HOME PAGE
+════════════════════════════════════════════════════ -->
+<div id="page-home" class="page active min-h-screen">
+
+  <!-- Home Navbar -->
+  <nav class="hero-gradient px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-50 border-b border-white/10">
+    <div class="flex items-center gap-2">
+      <span class="msymbol text-blue-300 text-2xl sm:text-3xl">shield_with_heart</span>
+      <span class="text-white font-bold text-lg sm:text-xl tracking-tight">ClaimAI</span>
+      <span class="text-blue-300 text-[10px] sm:text-xs bg-white/10 px-2 py-0.5 rounded-full ml-1 font-medium hidden sm:inline">Enterprise</span>
+    </div>
+    <div class="hidden md:flex items-center gap-6 lg:gap-8 text-sm text-white/70">
+      <a href="#features" class="hover:text-white transition-colors">Features</a>
+      <a href="#pipeline" class="hover:text-white transition-colors">Pipeline</a>
+      <a href="#dataset" class="hover:text-white transition-colors">Dataset</a>
+      <a href="#output" class="hover:text-white transition-colors">Output Schema</a>
+    </div>
+    <button onclick="showDashboard()" class="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 text-white px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-blue-900/30">
+      <span class="msymbol text-base">dashboard</span>
+      <span class="hidden sm:inline">Open</span> Dashboard
+    </button>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-gradient flex-1 px-4 sm:px-8 pt-12 sm:pt-20 pb-20 sm:pb-28 flex flex-col items-center text-center relative overflow-hidden">
+    <div class="absolute top-10 left-1/4 w-48 sm:w-72 h-48 sm:h-72 bg-blue-500/20 rounded-full blur-3xl pointer-events-none pulse-slow"></div>
+    <div class="absolute bottom-0 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="relative z-10 max-w-4xl w-full">
+      <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-blue-200 text-[10px] sm:text-xs px-3 sm:px-4 py-1 sm:py-1.5 rounded-full mb-4 sm:mb-6 font-medium">
+        <span class="msymbol text-sm">auto_awesome</span>
+        HackerRank Orchestrate · Multi-Modal Evidence Review
+      </div>
+      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-4 sm:mb-6">
+        AI-Powered<br/>
+        <span class="text-blue-300">Damage Claim</span> Verification
+      </h1>
+      <p class="text-white/70 text-sm sm:text-lg max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed px-2">
+        A multi-modal system that verifies damage claims using submitted images, conversation transcripts, 
+        user history, and evidence requirements — producing structured decisions for every claim.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+        <button onclick="showDashboard()" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all shadow-xl shadow-blue-900/40 w-full sm:w-auto justify-center">
+          <span class="msymbol">rocket_launch</span> Launch Dashboard
+        </button>
+        <a href="/api/claims" target="_blank" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all w-full sm:w-auto justify-center">
+          <span class="msymbol text-blue-300">api</span> Explore API
+        </a>
+      </div>
+    </div>
+
+    <!-- Hero stats -->
+    <div class="relative z-10 mt-10 sm:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 w-full max-w-3xl px-2">
+      <div class="bg-white/10 border border-white/20 rounded-xl p-3 sm:p-4 text-center backdrop-blur-sm">
+        <p class="text-xl sm:text-2xl font-bold text-white" id="heroTotal">—</p>
+        <p class="text-white/60 text-[10px] sm:text-xs mt-1">Total Claims</p>
+      </div>
+      <div class="bg-white/10 bor">Selectder border-white/20 rounded-xl p-3 sm:p-4 text-center backdrop-blur-sm">
+        <p class="text-xl sm:text-2xl font-bold text-green-300" id="heroSupported">—</p>
+        <p class="text-white/60 text-[10px] sm:text-xs mt-1">Supported</p>
+      </div>
+      <div class="bg-white/10 border border-white/20 rounded-xl p-3 sm:p-4 text-center backdrop-blur-sm">
+        <p class="text-xl sm:text-2xl font-bold text-red-300" id="heroContradicted">—</p>
+        <p class="text-white/60 text-[10px] sm:text-xs mt-1">Contradicted</p>
+      </div>
+      <div class="bg-white/10 border border-white/20 rounded-xl p-3 sm:p-4 text-center backdrop-blur-sm">
+        <p class="text-xl sm:text-2xl font-bold text-amber-300" id="heroReview">—</p>
+        <p class="text-white/60 text-[10px] sm:text-xs mt-1">Manual Review</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="bg-white py-12 sm:py-20 px-4 sm:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-8 sm:mb-14">
+        <p class="text-blue-600 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">What it does</p>
+        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">System Capabilities</h2>
+        <p class="text-slate-500 mt-2 sm:mt-3 max-w-xl mx-auto text-sm">Every claim is processed through a multi-layer verification pipeline combining visual analysis, text parsing, and risk scoring.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-blue-100 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-blue-600 text-xl sm:text-2xl">image_search</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Multi-Modal Visual Analysis</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Inspects submitted images against the claim. Blur, glare, wrong-angle, and text-injection are detected automatically.</p>
+        </div>
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-green-100 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-green-600 text-xl sm:text-2xl">chat_bubble</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Conversation Parsing</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Extracts the exact damage claim from the support transcript to identify object part and issue type.</p>
+        </div>
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-amber-100 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-amber-600 text-xl sm:text-2xl">history</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">User History Risk</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Cross-references claim history to flag repeated patterns or manipulation without overriding visual evidence.</p>
+        </div>
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-purple-100 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-purple-600 text-xl sm:text-2xl">checklist</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Evidence Standard Enforcement</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Maps each claim to a minimum evidence checklist and reports whether the image set satisfies it.</p>
+        </div>
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-red-100 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-red-600 text-xl sm:text-2xl">security</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Prompt Injection Detection</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Detects text instructions in transcripts or images that attempt to override the verification system.</p>
+        </div>
+        <div class="p-5 sm:p-6 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3 sm:mb-4"><span class="msymbol text-slate-600 text-xl sm:text-2xl">bar_chart</span></div>
+          <h3 class="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Dual-Strategy Engine</h3>
+          <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Strategy A: fast heuristic rules. Strategy B: VLM visual inspection — switchable from the dashboard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pipeline Section -->
+  <section id="pipeline" class="bg-slate-50 py-12 sm:py-20 px-4 sm:px-8">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-8 sm:mb-14">
+        <p class="text-blue-600 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">How it works</p>
+        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Verification Pipeline</h2>
+      </div>
+      <div class="grid gap-4 sm:gap-6">
+        <div class="flex gap-3 sm:gap-4 items-start">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">1</div>
+          <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-100 flex-1 shadow-sm">
+            <h4 class="font-bold text-slate-800 mb-1 text-sm sm:text-base">Load Input</h4>
+            <p class="text-slate-500 text-xs sm:text-sm">Read <code class="bg-slate-100 px-1 rounded text-[10px] sm:text-xs">claims.csv</code>, user history, and evidence requirements.</p>
+          </div>
+        </div>
+        <div class="flex gap-3 sm:gap-4 items-start">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">2</div>
+          <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-100 flex-1 shadow-sm">
+            <h4 class="font-bold text-slate-800 mb-1 text-sm sm:text-base">Conversation Parse</h4>
+            <p class="text-slate-500 text-xs sm:text-sm">Extract claim object, issue type, and object part from the customer utterance.</p>
+          </div>
+        </div>
+        <div class="flex gap-3 sm:gap-4 items-start">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">3</div>
+          <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-100 flex-1 shadow-sm">
+            <h4 class="font-bold text-slate-800 mb-1 text-sm sm:text-base">Image Analysis</h4>
+            <p class="text-slate-500 text-xs sm:text-sm">OpenCV checks blur, glare, brightness. VLM strategy inspects actual damage.</p>
+          </div>
+        </div>
+        <div class="flex gap-3 sm:gap-4 items-start">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">4</div>
+          <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-100 flex-1 shadow-sm">
+            <h4 class="font-bold text-slate-800 mb-1 text-sm sm:text-base">Risk Scoring</h4>
+            <p class="text-slate-500 text-xs sm:text-sm">User history, image quality flags, and text injection signals merged into risk score.</p>
+          </div>
+        </div>
+        <div class="flex gap-3 sm:gap-4 items-start">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">5</div>
+          <div class="bg-white rounded-xl p-4 sm:p-5 border-2 border-green-200 flex-1 shadow-sm">
+            <h4 class="font-bold text-slate-800 mb-1 text-sm sm:text-base">Decision Output</h4>
+            <p class="text-slate-500 text-xs sm:text-sm">Produces <code class="bg-slate-100 px-1 rounded text-[10px] sm:text-xs">output.csv</code> with status, justification, severity, evidence standard, and supporting image IDs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dataset & Output Schema -->
+  <section id="dataset" class="bg-white py-12 sm:py-20 px-4 sm:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
+        <div>
+          <p class="text-blue-600 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">Input</p>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6">Dataset Files</h2>
+          <div class="space-y-2 sm:space-y-3">
+            <div class="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="msymbol text-blue-500 text-lg sm:text-xl mt-0.5">table_chart</span>
+              <div><p class="font-semibold text-slate-800 text-xs sm:text-sm">claims.csv</p><p class="text-slate-500 text-[10px] sm:text-xs mt-0.5">44 test claims — image paths, conversation, claim object.</p></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="msymbol text-green-500 text-lg sm:text-xl mt-0.5">verified</span>
+              <div><p class="font-semibold text-slate-800 text-xs sm:text-sm">sample_claims.csv</p><p class="text-slate-500 text-[10px] sm:text-xs mt-0.5">20 labeled examples with expected outputs.</p></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="msymbol text-amber-500 text-lg sm:text-xl mt-0.5">person_alert</span>
+              <div><p class="font-semibold text-slate-800 text-xs sm:text-sm">user_history.csv</p><p class="text-slate-500 text-[10px] sm:text-xs mt-0.5">Per-user claim counts, rejection rates, risk flags.</p></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="msymbol text-purple-500 text-lg sm:text-xl mt-0.5">checklist</span>
+              <div><p class="font-semibold text-slate-800 text-xs sm:text-sm">evidence_requirements.csv</p><p class="text-slate-500 text-[10px] sm:text-xs mt-0.5">Minimum image evidence rules per object type.</p></div>
+            </div>
+          </div>
+        </div>
+        <div id="output">
+          <p class="text-green-600 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">Output</p>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6">output.csv Schema</h2>
+          <div class="bg-slate-900 rounded-2xl p-4 sm:p-5 text-xs sm:text-sm font-mono overflow-x-auto">
+            <div class="space-y-1 sm:space-y-1.5">
+              <div><span class="text-blue-300">user_id</span><span class="text-slate-500"> · </span><span class="text-slate-400 text-[10px] sm:text-xs">submitting user</span></div>
+              <div><span class="text-blue-300">claim_object</span><span class="text-slate-500"> · </span><span class="text-green-400 text-[10px] sm:text-xs">car | laptop | package</span></div>
+              <div><span class="text-amber-300">evidence_standard_met</span><span class="text-slate-500"> · </span><span class="text-green-400 text-[10px] sm:text-xs">true | false</span></div>
+              <div><span class="text-red-300">risk_flags</span><span class="text-slate-500"> · </span><span class="text-slate-400 text-[10px] sm:text-xs">semicolon-separated</span></div>
+              <div><span class="text-purple-300">issue_type</span><span class="text-slate-500"> · </span><span class="text-slate-400 text-[10px] sm:text-xs">dent | crack | scratch …</span></div>
+              <div><span class="text-purple-300">object_part</span><span class="text-slate-500"> · </span><span class="text-slate-400 text-[10px] sm:text-xs">front_bumper | screen …</span></div>
+              <div><span class="text-green-300">claim_status</span><span class="text-slate-500"> · </span><span class="text-green-400 text-[10px] sm:text-xs">supported | contradicted | nei</span></div>
+              <div><span class="text-green-300">supporting_image_ids</span><span class="text-slate-500"> · </span><span class="text-slate-400 text-[10px] sm:text-xs">img_1;img_2 or none</span></div>
+              <div><span class="text-cyan-300">valid_image</span><span class="text-slate-500"> · </span><span class="text-green-400 text-[10px] sm:text-xs">true | false</span></div>
+              <div><span class="text-cyan-300">severity</span><span class="text-slate-500"> · </span><span class="text-green-400 text-[10px] sm:text-xs">none | low | medium | high</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="hero-gradient py-10 sm:py-16 px-4 sm:px-8 text-center">
+    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Ready to review claims?</h2>
+    <p class="text-white/60 mb-6 sm:mb-8 max-w-lg mx-auto text-sm">Open the dashboard to browse predictions, inspect images, and run the verification engine.</p>
+    <button onclick="showDashboard()" class="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl hover:bg-blue-50 transition-all shadow-xl text-sm sm:text-base">
+      <span class="msymbol">dashboard</span> Open Dashboard
+    </button>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-500 text-[10px] sm:text-xs py-4 sm:py-6 px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <span class="msymbol text-blue-500 text-base sm:text-lg">shield_with_heart</span>
+      <span class="text-white font-semibold">ClaimAI</span>
+      <span>· Multi-Modal Evidence Review</span>
+    </div>
+    <span>HackerRank Orchestrate Challenge · June 2026</span>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     DASHBOARD PAGE
+════════════════════════════════════════════════════ -->
+<div id="page-dashboard" class="page min-h-screen bg-slate-100">
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center hidden">
+    <div class="bg-white rounded-2xl p-6 sm:p-8 flex flex-col items-center gap-3 sm:gap-4 shadow-2xl max-w-xs w-full text-center mx-4">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-4 border-blue-100 border-t-blue-600 spinner"></div>
+      <p class="font-semibold text-slate-800 text-sm sm:text-base">Running Verification Engine</p>
+      <p class="text-slate-500 text-xs sm:text-sm">Processing claims through visual checks…</p>
+    </div>
+  </div>
+
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar overlay for mobile -->
+    <div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="dashSidebar" class="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0 z-40">
+      <div class="px-4 sm:px-5 py-4 sm:py-5 border-b border-slate-100">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="msymbol text-blue-600 text-xl sm:text-2xl">shield_with_heart</span>
+          <span class="font-bold text-slate-900 text-base sm:text-lg">ClaimAI</span>
+        </div>
+        <span class="text-[10px] sm:text-xs text-slate-400 font-medium">Evidence Review Suite</span>
+      </div>
+      <nav class="flex-1 p-2 sm:p-3 space-y-0.5 overflow-y-auto">
+        <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold px-3 pt-2 pb-1 tracking-widest">Navigation</p>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600 active" onclick="filterSource('all',this)">
+          <span class="msymbol text-base sm:text-lg">dashboard</span> Overview
+        </a>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600" onclick="filterSource('test',this)">
+          <span class="msymbol text-base sm:text-lg">fact_check</span> Test Claims
+        </a>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600" onclick="filterSource('sample',this)">
+          <span class="msymbol text-base sm:text-lg">rate_review</span> Sample Claims
+        </a>
+        <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold px-3 pt-4 pb-1 tracking-widest">Tools</p>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600" href="/api/claims" target="_blank">
+          <span class="msymbol text-base sm:text-lg">api</span> Raw API
+        </a>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600" onclick="exportPredictions()">
+          <span class="msymbol text-base sm:text-lg">file_download</span> Export CSV
+        </a>
+        <a class="nav-item flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer text-xs sm:text-sm text-slate-600" onclick="showHome()">
+          <span class="msymbol text-base sm:text-lg">home</span> Back to Home
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main dashboard content -->
+    <div id="dashMain" class="flex-1 flex flex-col overflow-hidden" style="margin-left:0;">
+
+      <!-- Top bar -->
+      <header class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-4 shrink-0 no-print">
+        <!-- Mobile hamburger -->
+        <button class="md:hidden text-slate-600" onclick="openSidebar()">
+          <span class="msymbol">menu</span>
+        </button>
+        <!-- Search -->
+        <div class="relative flex-1 max-w-md">
+          <span class="msymbol absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+          <input id="searchInput" oninput="handleSearch()" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Search claims…"/>
+        </div>
+        <!-- Strategy bar -->
+        <div id="strategyBar" class="hidden sm:flex items-center gap-2 bg-slate-50 p-1 sm:p-1.5 rounded-lg border border-slate-200">
+          <select id="strategySelect" class="bg-white border-slate-200 rounded text-[10px] sm:text-xs font-bold text-blue-600 focus:ring-0 cursor-pointer p-1">
+            <option value="heuristic">Heuristic</option>
+            <option value="vlm">VLM</option>
           </select>
-          <button onclick="runVerification()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 transition-colors">
-            <span class="msymbol text-sm">play_arrow</span><span class="hidden sm:inline">Run</span>
+          <button onclick="runVerification()" class="bg-blue-600 text-white rounded text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 hover:bg-blue-700 transition-colors flex items-center gap-1">
+            <span class="msymbol text-xs sm:text-sm">play_arrow</span>Run
           </button>
         </div>
         <!-- Mobile run button -->
-        <button onclick="runVerification()" class="sm:hidden shrink-0 w-9 h-9 flex items-center justify-center bg-blue-600 text-white rounded-lg">
-          <span class="msymbol text-base">play_arrow</span>
+        <button class="sm:hidden bg-blue-600 text-white rounded-lg p-2" onclick="runVerification()">
+          <span class="msymbol text-lg">play_arrow</span>
         </button>
       </header>
 
-      <!-- Canvas -->
-      <div class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
+      <!-- Dashboard body -->
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
 
-        <!-- KPI cards — 2 col on mobile, 4 on lg -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="stat-card bg-white rounded-xl border border-slate-100 p-3 sm:p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</span>
-              <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center"><span class="msymbol text-blue-600 text-sm">folder</span></div>
-            </div>
-            <p class="text-2xl sm:text-3xl font-bold text-slate-900" id="metricTotal">—</p>
-            <p class="text-xs text-slate-400 mt-0.5">claims</p>
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+          <div class="stat-card bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
+            <div class="flex items-center gap-2 mb-2"><span class="msymbol text-blue-500 text-base sm:text-lg">assessment</span><span class="text-slate-500 text-[10px] sm:text-xs font-medium">Total Claims</span></div>
+            <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800" id="metricTotal">0</p>
           </div>
-          <div class="stat-card bg-white rounded-xl border border-slate-100 p-3 sm:p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Supported</span>
-              <div class="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center"><span class="msymbol text-green-600 text-sm">task_alt</span></div>
-            </div>
-            <p class="text-2xl sm:text-3xl font-bold text-green-600" id="metricSupported">—</p>
-            <p class="text-xs text-slate-400 mt-0.5">verified</p>
+          <div class="stat-card bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
+            <div class="flex items-center gap-2 mb-2"><span class="msymbol text-green-500 text-base sm:text-lg">check_circle</span><span class="text-slate-500 text-[10px] sm:text-xs font-medium">Supported</span></div>
+            <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600" id="metricSupported">0</p>
           </div>
-          <div class="stat-card bg-white rounded-xl border border-slate-100 p-3 sm:p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contradicted</span>
-              <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><span class="msymbol text-red-500 text-sm">cancel</span></div>
-            </div>
-            <p class="text-2xl sm:text-3xl font-bold text-red-500" id="metricContradicted">—</p>
-            <p class="text-xs text-slate-400 mt-0.5">rejected</p>
+          <div class="stat-card bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
+            <div class="flex items-center gap-2 mb-2"><span class="msymbol text-red-500 text-base sm:text-lg">cancel</span><span class="text-slate-500 text-[10px] sm:text-xs font-medium">Contradicted</span></div>
+            <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600" id="metricContradicted">0</p>
           </div>
-          <div class="stat-card bg-white rounded-xl border border-slate-100 p-3 sm:p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Review</span>
-              <div class="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center"><span class="msymbol text-amber-600 text-sm">pending_actions</span></div>
-            </div>
-            <p class="text-2xl sm:text-3xl font-bold text-amber-600" id="metricReview">—</p>
-            <div class="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden"><div id="metricReviewBar" class="bg-amber-500 h-full rounded-full transition-all duration-700" style="width:0%"></div></div>
+          <div class="stat-card bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
+            <div class="flex items-center gap-2 mb-2"><span class="msymbol text-amber-500 text-base sm:text-lg">pending</span><span class="text-slate-500 text-[10px] sm:text-xs font-medium">Manual Review</span></div>
+            <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-600" id="metricReview">0</p>
           </div>
         </div>
 
-        <!-- Evidence + AI report: stacked on mobile, side-by-side on lg -->
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <!-- Image evidence -->
-          <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <span class="msymbol text-blue-600 text-xl">image</span>
-                <span class="font-semibold text-slate-800 text-sm">Submitted Evidence</span>
-              </div>
-              <span id="selectedClaimIdBadge" class="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full font-semibold">No claim selected</span>
+        <!-- Main content: Claims list + Detail panel -->
+        <div class="flex gap-3 sm:gap-4 lg:gap-6 min-h-0">
+
+          <!-- Claims List (left) -->
+          <div class="flex-1 min-w-0 flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div class="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <h3 class="font-semibold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+                <span class="msymbol text-blue-500 text-base sm:text-lg">list_alt</span>Claims Registry
+              </h3>
+              <select id="sourceFilter" onchange="applyFilter()" class="border border-slate-200 bg-slate-50 rounded px-2 py-1 text-[10px] sm:text-xs font-semibold text-blue-600 focus:ring-0">
+                <option value="all">All</option>
+                <option value="test">Test</option>
+                <option value="sample">Sample</option>
+              </select>
             </div>
-            <div id="i
+            <!-- Table header -->
+            <div class="grid grid-cols-12 gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-slate-50 text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 shrink-0">
+              <div class="col-span-2">ID</div>
+              <div class="col-span-3 hidden sm:block">Policyholder</div>
+              <div class="col-span-2">Object</div>
+              <div class="col-span-2 hidden sm:block">Issue</div>
+              <div class="col-span-2 sm:col-span-1">Risk</div>
+              <div class="col-span-6 sm:col-span-2">Status</div>
+            </div>
+            <!-- Scrollable rows -->
+            <div id="claimsList" class="flex-1 overflow-y-auto divide-y divide-slate-50">
+              <div class="text-center py-8 sm:py-12 text-slate-400 text-xs sm:text-sm"><span class="msymbol text-3xl sm:text-4xl block mb-2">hourglass_empty</span>Loading claims…</div>
+            </div>
+          </div>
+
+          <!-- Detail Panel (right, overlay on mobile) -->
+          <div id="detailPanel" class="w-full lg:w-[480px] xl:w-[540px] shrink-0 flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:block">
+            <!-- Detail header -->
+            <div class="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+              <h3 class="font-semibold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+                <span class="msymbol text-blue-500 text-base sm:text-lg">info</span>
+                <span id="detailTitle">Se a claim to view images</p>
+              </div>
+            </div>
+          </div>
+          <!-- AI findings -->
+          <div class="lg:col-span-2 bg-whilect a Claim</span>
+              </h3>
+              <button class="lg:hidden text-slate-400 hover:text-slate-600" onclick="closeDetail()">
+                <span class="msymbol">close</span>
+              </button>
+            </div>
+            <!-- Detail body -->
+            <div id="detailBody" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+              <div class="text-center py-8 sm:py-16 text-slate-400 text-xs sm:text-sm">
+                <span class="msymbol text-3xl sm:text-4xl block mb-2">touch_app</span>
+                Click a claim from the list to view its details
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /flex -->
+
+      </div><!-- /dashboard body -->
+    </div><!-- /main -->
+  </div><!-- /flex -->
+</div><!-- /page-dashboard -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════ -->
+<script>
+let allClaims = [];
+let filteredClaims = [];
+let selectedClaim = null;
+let currentFilter = 'all';
+
+/* ── Page Navigation ─────────────────────────────── */
+function showDashboard(){
+  document.getElementById('page-home').classList.remove('active');
+  document.getElementById('page-dashboard').classList.add('active');
+  loadClaims(); loadMetrics();
+}
+function showHome(){
+  document.getElementById('page-dashboard').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+}
+
+/* ── Mobile sidebar ──────────────────────────────── */
+function openSidebar(){
+  document.getElementById('dashSidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar(){
+  document.getElementById('dashSidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+/* ── Mobile detail panel ─────────────────────────── */
+function openDetail(){document.getElementById('detailPanel').classList.add('open');}
+function closeDetail(){document.getElementById('detailPanel').classList.remove('open');}
+
+/* ── Data Loading ────────────────────────────────── */
+function loadMetrics(){
+  fetch('/api/metrics').then(r=>r.json()).then(d=>{
+    document.getElementById('metricTotal').textContent = d.total_claims;
+    document.getElementById('metricSupported').textContent = d.supported;
+    document.getElementById('metricContradicted').textContent = d.contradicted;
+    document.getElementById('metricReview').textContent = d.manual_review;
+    // Home page stats
+    const ht = document.getElementById('heroTotal');
+    if(ht){ ht.textContent=d.total_claims; document.getElementById('heroSupported').textContent=d.supported; document.getElementById('heroContradicted').textContent=d.contradicted; document.getElementById('heroReview').textContent=d.manual_review; }
+  }).catch(e=>console.error('Metrics error:',e));
+}
+
+function loadClaims(){
+  fetch('/api/claims').then(r=>r.json()).then(data=>{
+    allClaims=data;
+    applyFilter();
+  }).catch(e=>console.error('Claims error:',e));
+}
+
+function applyFilter(){
+  currentFilter = document.getElementById('sourceFilter').value;
+  filteredClaims = currentFilter==='all' ? allClaims : allClaims.filter(c=>c.source===currentFilter);
+  renderClaimsList();
+}
+
+function filterSource(src, el){
+  document.getElementById('sourceFilter').value=src;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  applyFilter();
+  closeSidebar();
+}
+
+function handleSearch(){
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if(!q){ applyFilter(); return; }
+  filteredClaims = allClaims.filter(c=>{
+    const f = currentFilter==='all' || c.source===currentFilter;
+    const m = c.claim_id.toLowerCase().includes(q) || c.policyholder.toLowerCase().includes(q) || c.claim_object.toLowerCase().includes(q) || c.issue_type.toLowerCase().includes(q);
+    return f && m;
+  });
+  renderClaimsList();
+}
+
+/* ── Render Claims List ──────────────────────────── */
+function renderClaimsList(){
+  const list = document.getElementById('claimsList');
+  if(filteredClaims.length===0){
+    list.innerHTML='<div class="text-center py-12 text-slate-400 text-sm"><span class="msymbol text-4xl block mb-2">search_off</span>No claims found</div>';
+    return;
+  }
+  let html='';
+  filteredClaims.forEach((c,i)=>{
+    const riskColor = c.risk_score>70?'text-red-600 bg-red-50':(c.risk_score>40?'text-amber-600 bg-amber-50':'text-green-600 bg-green-50');
+    const statusBadge = c.claim_status==='supported'?'badge-supported':(c.claim_status==='contradicted'?'badge-contradicted':'badge-nei');
+    const sel = selectedClaim && selectedClaim.claim_id===c.claim_id ? 'selected':'';
+    html+=`<div class="claim-row ${sel} grid grid-cols-12 gap-1 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer items-center text-[10px] sm:text-xs" onclick="selectClaim(${i})">
+      <div class="col-span-2 font-semibold text-blue-600 truncate">${c.claim_id}</div>
+      <div class="col-span-3 hidden sm:block text-slate-700 truncate">${c.policyholder}</div>
+      <div class="col-span-2 text-slate-500 uppercase font-medium">${c.claim_object}</div>
+      <div class="col-span-2 hidden sm:block text-slate-600 truncate">${(c.issue_type||'—').replace(/_/g,' ')}</div>
+      <div class="col-span-2 sm:col-span-1"><span class="inline-block px-1.5 py-0.5 rounded-md font-bold text-[9px] sm:text-[10px] ${riskColor}">${c.risk_score}</span></div>
+      <div class="col-span-6 sm:col-span-2"><span class="inline-block px-2 py-0.5 rounded-full font-bold text-[9px] sm:text-[10px] uppercase ${statusBadge}">${c.claim_status.replace(/_/g,' ')}</span></div>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+/* ── Select Claim & Render Detail ────────────────── */
+function selectClaim(idx){
+  selectedClaim = filteredClaims[idx];
+  renderClaimsList(); // re-render to highlight
+  renderDetail(selectedClaim);
+  openDetail(); // on mobile, opens the panel
+}
+
+function renderDetail(c){
+  document.getElementById('detailTitle').textContent = c.claim_id + ' — ' + c.policyholder;
+  const body = document.getElementById('detailBody');
+
+  // Status badge
+  const statusBadge = c.claim_status==='supported'?'badge-supported':(c.claim_status==='contradicted'?'badge-contradicted':'badge-nei');
+  const sevColor = c.severity==='high'?'text-red-600 bg-red-50 border-red-200':(c.severity==='medium'?'text-amber-600 bg-amber-50 border-amber-200':(c.severity==='low'?'text-green-600 bg-green-50 border-green-200':'text-slate-500 bg-slate-50 border-slate-200'));
+  const validColor = c.valid_image==='true'?'text-green-600':'text-red-600';
+
+  // Supporting Image IDs
+  const imgIds = (c.supporting_image_ids && c.supporting_image_ids.length>0) ? c.supporting_image_ids.map(id=>`<span class="inline-block bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold">${id}</span>`).join(' ') : '<span class="text-slate-400 text-xs">none</span>';
+
+  // Risk flags
+  const flags = c.risk_flags.map(f=>{
+    if(f==='none') return '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium">none</span>';
+    const fc = f.includes('manipulation')||f.includes('text_instruction')?'bg-red-50 text-red-700 border-red-200':'bg-amber-50 text-amber-700 border-amber-200';
+    return `<span class="inline-block ${fc} border px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium uppercase">${f.replace(/_/g,' ')}</span>`;
+  }).join(' ');
+
+  // User history
+  const h = c.user_history || {};
+  const histFlags = (h.history_flags||'none').split(';').filter(Boolean);
+  const histBadges = histFlags.map(f=>{
+    if(f==='none') return '<span class="bg-green-50 text-green-700 px-2 py-0.5 rounded text-[9px] sm:text-[10px]">Clean</span>';
+    return `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase">${f.replace(/_/g,' ')}</span>`;
+  }).join(' ');
+
+  // Image gallery
+  let gallery = '';
+  c.image_paths.forEach(p=>{
+    const url = `/api/images/${p}`;
+    const imgId = p.split('/').pop().replace(/\.[^/.]+$/,'');
+    const isSupporting = c.supporting_image_ids && c.supporting_image_ids.includes(imgId);
+    const borderClass = isSupporting ? 'ring-2 ring-blue-400' : 'ring-1 ring-slate-200';
+    gallery += `<div class="relative rounded-lg overflow-hidden ${borderClass} aspect-[4/3] bg-slate-100">
+      <img src="${url}" class="w-full h-full object-cover" alt="Evidence ${imgId}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 75%22><rect fill=%22%23f1f5f9%22 width=%22100%22 height=%2275%22/><text x=%2250%22 y=%2240%22 text-anchor=%22middle%22 font-size=%228%22 fill=%22%2394a3b8%22>No image</text></svg>'"/>
+      <div class="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-mono">${imgId}</div>
+      ${isSupporting?'<div class="absolute top-1 right-1 bg-blue-500 text-white text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full font-bold">SUPPORTING</div>':''}
+    </div>`;
+  });
+
+  // Conversation transcript  
+  const convoLines = c.user_claim.split('|').map(line=>{
+    line = line.trim();
+    const isCustomer = line.toLowerCase().startsWith('customer:') || line.toLowerCase().startsWith('cliente:');
+    const isAgent = line.toLowerCase().startsWith('agent:') || line.toLowerCase().startsWith('support:') || line.toLowerCase().startsWith('soporte:');
+    if(isCustomer) return `<div class="flex gap-2 items-start"><span class="msymbol text-blue-500 text-sm sm:text-base shrink-0 mt-0.5">person</span><p class="text-xs sm:text-sm text-slate-800 leading-relaxed">${line}</p></div>`;
+    if(isAgent) return `<div class="flex gap-2 items-start"><span class="msymbol text-slate-400 text-sm sm:text-base shrink-0 mt-0.5">support_agent</span><p class="text-xs sm:text-sm text-slate-500 leading-relaxed">${line}</p></div>`;
+    return `<p class="text-xs sm:text-sm text-slate-600 ml-6 sm:ml-7">${line}</p>`;
+  }).join('');
+
+  body.innerHTML = `
+    <!-- Status Row -->
+    <div class="flex flex-wrap gap-2 items-center">
+      <span class="px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase ${statusBadge}">${c.claim_status.replace(/_/g,' ')}</span>
+      <span class="px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold border ${sevColor} uppercase">Severity: ${c.severity}</span>
+      <span class="px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${validColor} bg-slate-50 border border-slate-200">
+        <span class="msymbol text-xs sm:text-sm align-middle">${c.valid_image==='true'?'verified':'error'}</span> Valid: ${c.valid_image}
+      </span>
+    </div>
+
+    <!-- Quick Facts -->
+    <div class="grid grid-cols-2 gap-2 sm:gap-3">
+      <div class="bg-slate-50 rounded-lg p-2.5 sm:p-3 border border-slate-100">
+        <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-0.5">Object · Part</p>
+        <p class="text-xs sm:text-sm font-semibold text-slate-800">${c.claim_object.toUpperCase()} › ${(c.object_part||'—').replace(/_/g,' ').toUpperCase()}</p>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-2.5 sm:p-3 border border-slate-100">
+        <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-0.5">Issue Type</p>
+        <p class="text-xs sm:text-sm font-semibold text-slate-800">${(c.issue_type||'—').replace(/_/g,' ').toUpperCase()}</p>
+      </div>
+    </div>
+
+    <!-- Supporting Image IDs -->
+    <div class="bg-blue-50/50 rounded-lg p-2.5 sm:p-3 border border-blue-100">
+      <p class="text-[9px] sm:text-[10px] text-blue-500 uppercase font-bold mb-1">Supporting Image IDs</p>
+      <div class="flex flex-wrap gap-1.5">${imgIds}</div>
+    </div>
+
+    <!-- Image Gallery -->
+    <div>
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-2">Submitted Evidence (${c.image_paths.length} image${c.image_paths.length>1?'s':''})</p>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${gallery}</div>
+    </div>
+
+    <!-- Conversation Transcript -->
+    <div class="bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100">
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1"><span class="msymbol text-sm">chat</span> Claim Conversation</p>
+      <div class="space-y-2">${convoLines}</div>
+    </div>
+
+    <!-- Evidence Standard -->
+    <div class="bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100">
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-1 flex items-center gap-1"><span class="msymbol text-sm">checklist</span> Evidence Standard</p>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="msymbol text-sm ${c.evidence_standard_met==='true'?'text-green-500':'text-red-500'}">${c.evidence_standard_met==='true'?'check_circle':'cancel'}</span>
+        <span class="text-xs sm:text-sm font-semibold ${c.evidence_standard_met==='true'?'text-green-700':'text-red-700'}">${c.evidence_standard_met==='true'?'Met':'Not Met'}</span>
+      </div>
+      <p class="text-[10px] sm:text-xs text-slate-600 leading-relaxed">${c.evidence_standard_met_reason || 'No reason provided.'}</p>
+    </div>
+
+    <!-- Risk Flags -->
+    <div>
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-1.5 flex items-center gap-1"><span class="msymbol text-sm">warning</span> Risk Flags</p>
+      <div class="flex flex-wrap gap-1.5">${flags}</div>
+    </div>
+
+    <!-- Justification -->
+    <div class="bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100">
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-1 flex items-center gap-1"><span class="msymbol text-sm">gavel</span> AI Justification</p>
+      <p class="text-[10px] sm:text-xs text-slate-700 leading-relaxed italic">${c.claim_status_justification || 'No justification available.'}</p>
+    </div>
+
+    <!-- User History -->
+    <div class="bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100">
+      <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1"><span class="msymbol text-sm">history</span> User History — ${c.user_id}</p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+        <div class="text-center bg-white rounded-lg p-2 border border-slate-100">
+          <p class="text-base sm:text-lg font-bold text-slate-800">${h.past_claim_count||0}</p>
+          <p class="text-[8px] sm:text-[9px] text-slate-400 uppercase">Total Claims</p>
+        </div>
+        <div class="text-center bg-white rounded-lg p-2 border border-slate-100">
+          <p class="text-base sm:text-lg font-bold text-green-600">${h.accept_claim||0}</p>
+          <p class="text-[8px] sm:text-[9px] text-slate-400 uppercase">Accepted</p>
+        </div>
+        <div class="text-center bg-white rounded-lg p-2 border border-slate-100">
+          <p class="text-base sm:text-lg font-bold text-red-600">${h.rejected_claim||0}</p>
+          <p class="text-[8px] sm:text-[9px] text-slate-400 uppercase">Rejected</p>
+        </div>
+        <div class="text-center bg-white rounded-lg p-2 border border-slate-100">
+          <p class="text-base sm:text-lg font-bold text-amber-600">${h.last_90_days_claim_count||0}</p>
+          <p class="text-[8px] sm:text-[9px] text-slate-400 uppercase">Last 90 Days</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mb-2">${histBadges}</div>
+      <p class="text-[10px] sm:text-xs text-slate-600 italic">${h.history_summary||'No history available.'}</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 pt-2">
+      <button onclick="approveSelected()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+        <span class="msymbol text-sm">task_alt</span> Approve
+      </button>
+      <button onclick="exportPredictions()" class="flex-1 border border-slate-300 text-slate-700 hover:bg-slate-50 py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+        <span class="msymbol text-sm">file_download</span> Export CSV
+      </button>
+    </div>
+  `;
+}
+
+/* ── Actions ─────────────────────────────────────── */
+function runVerification(){
+  const strat = document.getElementById('strategySelect').value;
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.remove('hidden'); overlay.style.display='flex';
+  fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({strategy:strat})})
+    .then(r=>r.json()).then(d=>{
+      alert('Verification complete: ' + strat.toUpperCase());
+      loadClaims(); loadMetrics();
+    }).catch(e=>{console.error(e);alert('Verification failed.');})
+    .finally(()=>{overlay.style.display='none'; overlay.classList.add('hidden');});
+}
+
+function approveSelected(){
+  alert(selectedClaim ? `Claim ${selectedClaim.claim_id} approved.` : 'No claim selected.');
+}
+
+function exportPredictions(){
+  window.open('/api/claims','_blank');
+}
+
+/* ── Init ────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded',()=>{
+  loadMetrics();
+  // Check if URL hash wants dashboard
+  if(window.location.hash==='#dashboard') showDashboard();
+});
+</script>
+</body>
+</html>
