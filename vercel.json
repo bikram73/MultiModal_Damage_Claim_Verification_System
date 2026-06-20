@@ -1,8 +1,11 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "framework": null,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/claims_data.json",        "destination": "/code/claims_data.json" },
-    { "source": "/dataset/images/:path*",   "destination": "/dataset/images/:path*" },
-    { "source": "/",                        "destination": "/code/index.html" }
+    { "source": "/claims_data.json",      "destination": "/code/claims_data.json" },
+    { "source": "/dataset/images/:path*", "destination": "/dataset/images/:path*" },
+    { "source": "/",                      "destination": "/code/index.html" }
   ]
 }
