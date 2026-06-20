@@ -311,9 +311,17 @@ def serve_image(image_path: str):
     
     if not os.path.exists(full_path):
         # Return fallback placeholder if file does not exist
-        return HTTPException(status_code=404, detail="Image file not found.")
+        raise HTTPException(status_code=404, detail="Image file not found.")
         
     return FileResponse(full_path)
+
+@app.get("/claims_data.json")
+def serve_claims_data():
+    """Serve the static claims data JSON file"""
+    claims_data_path = os.path.join(WORKSPACE_ROOT, 'code', 'claims_data.json')
+    if not os.path.exists(claims_data_path):
+        raise HTTPException(status_code=404, detail="Claims data file not found.")
+    return FileResponse(claims_data_path, media_type="application/json")
 
 if __name__ == '__main__':
     import uvicorn

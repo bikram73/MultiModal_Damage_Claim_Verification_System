@@ -35,6 +35,34 @@ For every claim the system:
 
 ---
 
+## Vercel Deployment
+
+This application is configured for seamless Vercel deployment:
+
+### Prerequisites
+- Vercel CLI installed: `npm i -g vercel`
+- Environment variables configured (see `.env` section below)
+
+### Deploy to Vercel
+```bash
+# Clone and deploy
+git clone https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System.git
+cd MultiModal_Damage_Claim_Verification_System
+vercel --prod
+```
+
+### Environment Variables
+Configure these in your Vercel dashboard or via CLI:
+```bash
+vercel env add OPENAI_API_KEY
+vercel env add ANTHROPIC_API_KEY  # Optional: for Claude models
+vercel env add GOOGLE_API_KEY     # Optional: for Gemini models
+```
+
+The `app.py` file serves as the entry point for Vercel's Python runtime, importing the FastAPI application from `code/dashboard_server.py`.
+
+---
+
 ## Repository structure
 
 ```text
