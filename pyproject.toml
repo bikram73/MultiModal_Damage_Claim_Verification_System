@@ -5,7 +5,7 @@ description = "Multi-Modal Evidence Review System for Insurance Claims"
 authors = [
     {name = "ClaimAI Team"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",
