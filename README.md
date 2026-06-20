@@ -3,7 +3,7 @@
 An enterprise-grade AI system that verifies physical damage claims using submitted images, conversation transcripts, user claim history, and evidence requirements.
 
 [![GitHub](https://img.shields.io/badge/GitHub-bikram73%2FMultiModal__Damage__Claim__Verification__System-181717?logo=github)](https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System)
-[![Live Demo](https://img.shields.io/badge/Vercel-ClaimAI%20Dashboard-000000?logo=vercel)](https://claim-ai-multi-modal-evidence-review.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Vercel-ClaimAI%20Dashboard-000000?logo=vercel)](https://multi-modal-damage-claim-verificati.vercel.app)
 
 ---
 
@@ -31,7 +31,7 @@ For every claim the system:
 | | Link |
 |---|---|
 | GitHub | https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System |
-| Live Dashboard | https://claim-ai-multi-modal-evidence-review.vercel.app |
+| Live Dashboard | https://multi-modal-damage-claim-verificati.vercel.app |
 
 ---
 
