@@ -23,6 +23,20 @@ except ImportError:
     google_genai = None
     genai_types = None
 
+try:
+    from huggingface_hub import InferenceClient
+except ImportError:
+    InferenceClient = None
+
+# Fix SSL certificate verification on Windows
+try:
+    import certifi
+    import os as _os
+    _os.environ.setdefault('SSL_CERT_FILE', certifi.where())
+    _os.environ.setdefault('REQUESTS_CA_BUNDLE', certifi.where())
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
 # Allowed value sets (kept in sync with problem statement)
 # ---------------------------------------------------------------------------
@@ -314,6 +328,64 @@ class VerificationEngine:
             return None
 
     # ------------------------------------------------------------------
+    # HuggingFace Inference API  (Qwen2.5-VL vision model)
+    # ------------------------------------------------------------------
+    def _get_hf_client(self):
+        if InferenceClient is None:
+            raise ImportError("huggingface_hub package not installed. Run: pip install huggingface_hub")
+        api_key = os.environ.get('HUGGING_API_KEY')
+        if not api_key:
+            raise ValueError("HUGGING_API_KEY environment variable not set")
+        return InferenceClient(api_key=api_key)
+
+    def _call_huggingface(self, row: dict, image_paths: list[str]) -> dict | None:
+        """Call Qwen2.5-VL-7B via HuggingFace Inference API."""
+        try:
+            client = self._get_hf_client()
+        except (ImportError, ValueError) as e:
+            print(f"[HuggingFace] Setup error: {e}")
+            return None
+
+        img_ids = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
+
+        content = [
+            {
+                "type": "text",
+                "text": (
+                    VLM_SYSTEM_PROMPT + "\n\n"
+                    f"Claim object: {row['claim_object']}\n"
+                    f"Image IDs (in order): {', '.join(img_ids)}\n"
+                    f"Conversation:\n{row['user_claim']}\n\n"
+                    "Inspect every image carefully and return ONLY the JSON object."
+                )
+            }
+        ]
+        for csv_path in image_paths:
+            b64 = self._encode_image_b64(csv_path)
+            if b64 is None:
+                continue
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+            })
+
+        try:
+            response = client.chat.completions.create(
+                model="Qwen/Qwen2.5-VL-72B-Instruct",
+                messages=[{"role": "user", "content": content}],
+                max_tokens=512,
+                temperature=0,
+            )
+            raw = response.choices[0].message.content.strip()
+            raw = re.sub(r'^```[a-z]*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw)
+            import json
+            return json.loads(raw)
+        except Exception as e:
+            print(f"[HuggingFace] Error for {row.get('user_id')}: {e}")
+            return None
+
+    # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     def _sanitize_vlm_result(self, vlm: dict, claim_object: str) -> dict:
         allowed_parts = ALLOWED_PARTS.get(claim_object, set())
@@ -581,6 +653,13 @@ class VerificationEngine:
             if gemini_raw:
                 result = _merge_history_flags(
                     self._sanitize_vlm_result(gemini_raw, row['claim_object'])
+                )
+
+        elif strategy == 'huggingface':
+            hf_raw = self._call_huggingface(row, image_paths)
+            if hf_raw:
+                result = _merge_history_flags(
+                    self._sanitize_vlm_result(hf_raw, row['claim_object'])
                 )
 
         if result is None:

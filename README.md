@@ -70,19 +70,16 @@ For every claim the system:
 
 ## How it works
 
-### Two verification strategies
+### Four verification strategies
 
-**Strategy A — Heuristic (fast, zero cost)**
-- Keyword-based transcript parsing extracts object, part, and issue type
-- OpenCV checks: Laplacian variance for blur, mean brightness for low-light/glare
-- OCR (pytesseract) scans images for embedded text instructions (prompt injection)
-- Evidence requirements are matched against the claim object and issue family
-- User history risk flags are merged into the final risk score
+| Strategy | Model | Key needed | Cost |
+|---|---|---|---|
+| A — Heuristic | OpenCV + rule-based NLP | None | Free |
+| B — GPT-4o VLM | OpenAI GPT-4o vision | `OPENAI_API_KEY` | ~$0.01/claim |
+| C — Gemini 2.0 Flash | Google Gemini 2.0 Flash | `GOOGLE_API_KEY` | ~$0.001/claim |
+| D — Qwen2.5-VL-72B | HuggingFace Serverless | `HUGGING_API_KEY` | Free tier |
 
-**Strategy B — VLM (GPT-4o vision)**
-- GPT-4o inspects the actual image content against the claim
-- Produces image-grounded justifications with specific image IDs
-- Falls back gracefully to heuristic if `OPENAI_API_KEY` is not set
+All four are switchable from the dashboard dropdown without restarting the server.
 
 ### Risk scoring
 
@@ -140,22 +137,32 @@ cd MultiModal_Damage_Claim_Verification_System
 pip install -r requirements.txt
 ```
 
-### 2. Set your API key
+### 2. Set your API keys
 
 Create a `.env` file in the project root:
 
 ```
-OPENAI_API_KEY=sk-...your-key-here...
+OPENAI_API_KEY=sk-...        # Strategy B — GPT-4o vision
+GOOGLE_API_KEY=AIza...       # Strategy C — Gemini 2.0 Flash
+HUGGING_API_KEY=hf_...       # Strategy D — Qwen2.5-VL-72B
 ```
+
+All three are optional — Strategy A (heuristic) works with no keys at all. Each VLM strategy falls back to heuristic if its key is missing.
 
 ### 3. Run predictions
 
 ```bash
-# Heuristic strategy (no API key needed)
+# Strategy A — Heuristic (no key needed)
 python code/main.py heuristic
 
-# VLM strategy (requires OPENAI_API_KEY)
+# Strategy B — GPT-4o vision (requires OPENAI_API_KEY)
 python code/main.py vlm
+
+# Strategy C — Gemini 2.0 Flash (requires GOOGLE_API_KEY)
+python code/main.py gemini
+
+# Strategy D — Qwen2.5-VL-72B via HuggingFace (requires HUGGING_API_KEY)
+python code/main.py huggingface
 ```
 
 Output is written to `dataset/output.csv`.
@@ -207,7 +214,9 @@ To deploy to Vercel, import the GitHub repo at [vercel.com](https://vercel.com) 
 |---|---|
 | Backend | Python, FastAPI, Uvicorn |
 | Image analysis | OpenCV, Pillow, pytesseract |
-| VLM | OpenAI GPT-4o |
+| VLM — Strategy B | OpenAI GPT-4o |
+| VLM — Strategy C | Google Gemini 2.0 Flash |
+| VLM — Strategy D | Qwen2.5-VL-72B (HuggingFace) |
 | Frontend | HTML, Tailwind CSS, vanilla JS |
 | Deployment | Vercel (static), uvicorn (local) |
 | Env management | python-dotenv |
