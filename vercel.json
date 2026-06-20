@@ -1,7 +1,19 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/claims_data.json",      "destination": "/code/claims_data.json" },
-    { "source": "/dataset/images/:path*", "destination": "/dataset/images/:path*" }
-  ]
+  "env": {
+    "PYTHONPATH": "code"
+  }
 }
