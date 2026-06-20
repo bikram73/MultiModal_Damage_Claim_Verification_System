@@ -1,6 +1,13 @@
 import os
 import sys
 
+# Load .env from repo root if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+except ImportError:
+    pass
+
 # Ensure local modules inside code/ can be imported in serverless deployments
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 

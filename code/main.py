@@ -1,6 +1,14 @@
 import os
 import csv
 import sys
+
+# Load .env from repo root if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+except ImportError:
+    pass
+
 from verification_engine import VerificationEngine
 
 def run_predictions(input_csv_path, output_csv_path, strategy='heuristic'):
