@@ -95,7 +95,7 @@ Misclassified (6):
 
 ### Execution Latency
 
-- **Heuristic (Rule-based):** 8562.0 ms total (428.10 ms / claim)
+- **Heuristic (Rule-based):** 6471.4 ms total (323.57 ms / claim)
 - Real GPT-4o API latency (estimated): ~1.5 – 3 s / claim
 
 ### Model Calls and Token Usage (GPT-4o)

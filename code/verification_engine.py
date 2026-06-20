@@ -16,6 +16,13 @@ try:
 except ImportError:
     OpenAI = None
 
+try:
+    from google import genai as google_genai
+    from google.genai import types as genai_types
+except ImportError:
+    google_genai = None
+    genai_types = None
+
 # ---------------------------------------------------------------------------
 # Allowed value sets (kept in sync with problem statement)
 # ---------------------------------------------------------------------------
@@ -246,7 +253,67 @@ class VerificationEngine:
             return None
 
     # ------------------------------------------------------------------
-    # Sanitise VLM output against allowed value sets
+    # Google Gemini vision call  (google-genai SDK)
+    # ------------------------------------------------------------------
+    def _get_gemini_client(self):
+        if google_genai is None:
+            raise ImportError("google-genai package not installed. Run: pip install google-genai")
+        api_key = os.environ.get('GOOGLE_API_KEY')
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable not set")
+        return google_genai.Client(api_key=api_key)
+
+    def _call_gemini(self, row: dict, image_paths: list[str]) -> dict | None:
+        """Call Gemini 2.0 Flash with all images + claim text."""
+        try:
+            client = self._get_gemini_client()
+        except (ImportError, ValueError) as e:
+            print(f"[Gemini] Setup error: {e}")
+            return None
+
+        img_ids = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
+
+        prompt = (
+            VLM_SYSTEM_PROMPT + "\n\n"
+            f"Claim object: {row['claim_object']}\n"
+            f"Image IDs (in order): {', '.join(img_ids)}\n"
+            f"Conversation:\n{row['user_claim']}\n\n"
+            "Inspect every image carefully and return ONLY the JSON object."
+        )
+
+        parts = [prompt]
+        for csv_path in image_paths:
+            full_path = self._resolve_image_path(csv_path)
+            if not os.path.exists(full_path):
+                continue
+            try:
+                with open(full_path, 'rb') as f:
+                    img_bytes = f.read()
+                ext = os.path.splitext(full_path)[1].lower()
+                mime = 'image/jpeg' if ext in ('.jpg', '.jpeg') else 'image/png'
+                parts.append(genai_types.Part.from_bytes(data=img_bytes, mime_type=mime))
+            except Exception:
+                continue
+
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=parts,
+                config=genai_types.GenerateContentConfig(
+                    temperature=0,
+                    max_output_tokens=512,
+                )
+            )
+            raw = response.text.strip()
+            raw = re.sub(r'^```[a-z]*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw)
+            import json
+            return json.loads(raw)
+        except Exception as e:
+            print(f"[Gemini] Error for {row.get('user_id')}: {e}")
+            return None
+
+    # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     def _sanitize_vlm_result(self, vlm: dict, claim_object: str) -> dict:
         allowed_parts = ALLOWED_PARTS.get(claim_object, set())
@@ -490,19 +557,31 @@ class VerificationEngine:
 
         # ── strategy dispatch ──────────────────────────────────────────
         result = None
+
+        def _merge_history_flags(res):
+            hist_flags = user_history_info.get('history_flags', 'none')
+            existing = set(res['risk_flags'].split(';'))
+            if 'user_history_risk' in hist_flags:
+                existing.add('user_history_risk')
+            if 'manual_review_required' in hist_flags:
+                existing.add('manual_review_required')
+            existing.discard('none')
+            res['risk_flags'] = ';'.join(existing) if existing else 'none'
+            return res
+
         if strategy == 'vlm':
             vlm_raw = self._call_vlm(row, image_paths)
             if vlm_raw:
-                result = self._sanitize_vlm_result(vlm_raw, row['claim_object'])
-                # Merge user-history risk flags that VLM may miss
-                hist_flags = user_history_info.get('history_flags', 'none')
-                existing = set(result['risk_flags'].split(';'))
-                if 'user_history_risk' in hist_flags:
-                    existing.add('user_history_risk')
-                if 'manual_review_required' in hist_flags:
-                    existing.add('manual_review_required')
-                existing.discard('none')
-                result['risk_flags'] = ';'.join(existing) if existing else 'none'
+                result = _merge_history_flags(
+                    self._sanitize_vlm_result(vlm_raw, row['claim_object'])
+                )
+
+        elif strategy == 'gemini':
+            gemini_raw = self._call_gemini(row, image_paths)
+            if gemini_raw:
+                result = _merge_history_flags(
+                    self._sanitize_vlm_result(gemini_raw, row['claim_object'])
+                )
 
         if result is None:
             # Heuristic fallback (also default strategy)
