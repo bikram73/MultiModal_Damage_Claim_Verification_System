@@ -1,8 +1,21 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/code/index.html" },
-    { "source": "/claims_data.json", "destination": "/code/claims_data.json" },
-    { "source": "/dataset/images/:path*", "destination": "/dataset/images/:path*" }
-  ]
+    { "source": "/api/claims",              "destination": "/api/claims" },
+    { "source": "/api/metrics",             "destination": "/api/metrics" },
+    { "source": "/api/run",                 "destination": "/api/run" },
+    { "source": "/claims_data.json",        "destination": "/code/claims_data.json" },
+    { "source": "/dataset/images/:path*",   "destination": "/dataset/images/:path*" },
+    { "source": "/",                        "destination": "/code/index.html" }
+  ],
+  "functions": {
+    "api/claims.py":  { "runtime": "python3.9", "maxDuration": 10 },
+    "api/metrics.py": { "runtime": "python3.9", "maxDuration": 10 },
+    "api/run.py":     { "runtime": "python3.9", "maxDuration": 60 }
+  },
+  "env": {
+    "OPENAI_API_KEY":  "@openai_api_key",
+    "GOOGLE_API_KEY":  "@google_api_key",
+    "HUGGING_API_KEY": "@hugging_api_key"
+  }
 }

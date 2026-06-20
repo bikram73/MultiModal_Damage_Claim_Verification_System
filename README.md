@@ -42,7 +42,11 @@ For every claim the system:
 ├── AGENTS.md                        # Agent onboarding rules and log registry
 ├── problem_statement.md             # Full task description and I/O schema
 ├── requirements.txt                 # Python dependencies
-├── vercel.json                      # Vercel static deployment config
+├── vercel.json                      # Vercel serverless deployment config
+├── api/
+│   ├── claims.py                    # Serverless function — GET /api/claims
+│   ├── metrics.py                   # Serverless function — GET /api/metrics
+│   └── run.py                       # Serverless function — POST /api/run (VLM)
 ├── .env                             # API keys (never committed)
 ├── .gitignore
 ├── code/
@@ -198,13 +202,45 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) — full interactive dashboa
 
 ## Deployment
 
-The dashboard runs in two modes:
+### Local
 
-**Local (FastAPI)** — full backend with live prediction runs via `dashboard_server.py`
+```bash
+python code/dashboard_server.py
+# opens at http://127.0.0.1:8000
+```
 
-**Vercel (static)** — `vercel.json` routes everything to `index.html`, which auto-detects the cloud environment and loads `code/claims_data.json` instead of hitting the API
+### Vercel (with live API keys)
 
-To deploy to Vercel, import the GitHub repo at [vercel.com](https://vercel.com) — no extra configuration needed.
+The `api/` folder contains Python serverless functions (`claims.py`, `metrics.py`, `run.py`) that Vercel runs as Python lambdas. API keys are injected securely — never exposed to the browser.
+
+**Step 1 — Import the repo**
+
+Go to [vercel.com](https://vercel.com), click **Add New Project**, and import `bikram73/MultiModal_Damage_Claim_Verification_System`.
+
+**Step 2 — Add environment variables**
+
+In the Vercel dashboard go to **Project → Settings → Environment Variables** and add:
+
+| Name | Value |
+|---|---|
+| `OPENAI_API_KEY` | `sk-...` |
+| `GOOGLE_API_KEY` | `AIza...` |
+| `HUGGING_API_KEY` | `hf_...` |
+
+Or via CLI:
+```bash
+vercel env add OPENAI_API_KEY
+vercel env add GOOGLE_API_KEY
+vercel env add HUGGING_API_KEY
+```
+
+**Step 3 — Deploy**
+
+```bash
+vercel --prod
+```
+
+All four strategies will work live on Vercel. The `/api/run` endpoint calls the selected AI model using the keys from Vercel's environment.
 
 ---
 
