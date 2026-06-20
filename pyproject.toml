@@ -11,6 +11,3 @@ dependencies = [
     "numpy>=1.24.0",
     "pydantic>=2.0"
 ]
-
-[tool.vercel]
-entrypoint = "code.dashboard_server:app"
