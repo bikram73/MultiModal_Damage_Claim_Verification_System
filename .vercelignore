@@ -1,0 +1,13 @@
+api/
+*.py
+__pycache__/
+.env
+.git
+.vscode
+.qodo
+code/dashboard_server.py
+code/verification_engine.py
+code/generate_static_data.py
+code/main.py
+code/evaluation/
+code/__pycache__/
