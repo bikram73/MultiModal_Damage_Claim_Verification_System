@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Vercel entry point for the MultiModal Damage Claim Verification System.
-This file serves as the main entry point for Vercel deployment.
 """
 
 import sys
@@ -14,9 +13,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'code'))
 from dashboard_server import app
 
 # Export the app for Vercel
-# Vercel will automatically detect this as the ASGI application
-handler = app
+# This is the standard pattern for Vercel Python deployments
+def handler(request):
+    return app(request)
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+# Also make the app available directly
+application = app
