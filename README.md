@@ -1,148 +1,213 @@
-# 🛡️ ClaimVision AI - Multi-Modal Claim Verification Suite
+# 🛡️ ClaimAI — Multi-Modal Evidence Review
 
-ClaimVision AI is an enterprise-grade AI-powered claim verification platform designed to automate and streamline the first-level review of physical damage claims. By analyzing conversation transcripts, image files, policyholder history, and specific evidence rules, ClaimVision AI classifies claims into **Supported**, **Contradicted**, or **Not Enough Information** decisions in seconds.
+An enterprise-grade AI system that verifies physical damage claims using submitted images, conversation transcripts, user claim history, and evidence requirements.
 
----
-
-## 🚀 Key Features
-
-* **🧠 Smart Claim Extraction:** Parses chat transcripts using conversational keywords and semantic cues to extract the target object, part, and claimed damage.
-* **📸 Multi-Modal Image Verification:** Uses OpenCV and Pillow to run physical image checks:
-  * *Blurry Images:* Variance of Laplacian blur check.
-  * *Low Light & Glare:* Average pixel brightness detection.
-  * *Prompt Injection / Fraud:* Optical Character Recognition (OCR via Pytesseract) checking for text note instructions attempting to override standard review.
-* **📏 Evidence Requirement Validation:** Checks claim variables against standard checklists (e.g. car glass visibility, package interior contents unboxing verification) from `evidence_requirements.csv`.
-* **📊 User History Risk Analyzer:** Cross-references the claimant's ID against historical claims in `user_history.csv` to compute an aggregated claimant risk profile.
-* **⚡ Dual-Mode Enterprise Dashboard:** A Stripe and Notion-inspired interface that runs in two configurations:
-  * **Dynamic (FastAPI) Mode:** Connects to a live FastAPI Python backend on port 8000 for running prediction strategies on the fly.
-  * **Static (Vercel) Mode:** Automatically falls back to loading pre-compiled `claims_data.json` statically, rendering all features without any backend requirements.
+[![GitHub](https://img.shields.io/badge/GitHub-bikram73%2FMultiModal__Damage__Claim__Verification__System-181717?logo=github)](https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System)
+[![Live Demo](https://img.shields.io/badge/Vercel-ClaimAI%20Dashboard-000000?logo=vercel)](https://claim-ai-multi-modal-evidence-review.vercel.app)
 
 ---
 
-## 📂 Repository File Structure
+## What this project does
+
+ClaimAI processes insurance damage claims for three object types — **car**, **laptop**, and **package** — and produces a structured verdict for each one:
+
+- **Supported** — image evidence confirms the claimed damage
+- **Contradicted** — image evidence conflicts with the claim
+- **Not Enough Information** — images are insufficient to decide
+
+For every claim the system:
+
+1. Parses the chat transcript to extract the exact damage type, object, and part
+2. Runs image quality checks (blur, low light, glare, OCR-based prompt injection)
+3. Validates the image set against minimum evidence requirements
+4. Cross-references the user's claim history for risk context
+5. Produces a grounded justification referencing specific image IDs
+6. Estimates damage severity and flags anomalies
+
+---
+
+## Live links
+
+| | Link |
+|---|---|
+| GitHub | https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System |
+| Live Dashboard | https://claim-ai-multi-modal-evidence-review.vercel.app |
+
+---
+
+## Repository structure
 
 ```text
-Modern_Enterprise_AI_Dashboard/
-├── vercel.json                         # Vercel static deployment routing config
-├── README.md                           # Main documentation file (You are here)
-├── AGENTS.md                           # Onboarding rules and chat log registry
-├── code/                               # Application source code
-│   ├── main.py                         # Command-line prediction engine runner
-│   ├── verification_engine.py          # Core claims classifier & image quality logic
-│   ├── dashboard_server.py             # FastAPI backend REST API server
-│   ├── index.html                      # Interactive Tailwind CSS dashboard template
-│   ├── generate_static_data.py         # Script compiling claims data to static JSON
-│   ├── claims_data.json                # Pre-compiled claims data for Vercel runs
+.
+├── AGENTS.md                        # Agent onboarding rules and log registry
+├── problem_statement.md             # Full task description and I/O schema
+├── requirements.txt                 # Python dependencies
+├── vercel.json                      # Vercel static deployment config
+├── .env                             # API keys (never committed)
+├── .gitignore
+├── code/
+│   ├── main.py                      # CLI entry point — runs predictions
+│   ├── verification_engine.py       # Core verification logic (heuristic + VLM)
+│   ├── dashboard_server.py          # FastAPI backend server
+│   ├── index.html                   # Interactive dashboard (Tailwind CSS)
+│   ├── generate_static_data.py      # Compiles claims_data.json for static deploy
+│   ├── claims_data.json             # Pre-compiled data for Vercel (no backend)
 │   └── evaluation/
-│       ├── main.py                     # Evaluation script
-│       └── evaluation_report.md        # Compiled metrics comparison report
-└── dataset/                            # Input CSV files and image databases
-    ├── sample_claims.csv               # Ground-truth labeled samples
-    ├── claims.csv                      # Test input rows for prediction
-    ├── user_history.csv                # Claimant histories and flag indexes
-    ├── evidence_requirements.csv       # Minimum evidence checklists
+│       ├── main.py                  # Evaluation script against sample_claims.csv
+│       └── evaluation_report.md     # Metrics, cost analysis, and strategy comparison
+└── dataset/
+    ├── claims.csv                   # 44 test claims (no labels) — system input
+    ├── sample_claims.csv            # 20 labeled examples for evaluation
+    ├── user_history.csv             # Per-user claim counts and risk flags
+    ├── evidence_requirements.csv    # Minimum image evidence rules by object type
+    ├── output.csv                   # System predictions for claims.csv
     └── images/
-        ├── sample/                     # Images referenced by sample_claims.csv
-        └── test/                       # Images referenced by claims.csv
+        ├── sample/                  # Images for sample_claims.csv
+        └── test/                    # Images for claims.csv
 ```
 
 ---
 
-## 🛠️ Installation and Setup
+## How it works
+
+### Two verification strategies
+
+**Strategy A — Heuristic (fast, zero cost)**
+- Keyword-based transcript parsing extracts object, part, and issue type
+- OpenCV checks: Laplacian variance for blur, mean brightness for low-light/glare
+- OCR (pytesseract) scans images for embedded text instructions (prompt injection)
+- Evidence requirements are matched against the claim object and issue family
+- User history risk flags are merged into the final risk score
+
+**Strategy B — VLM (GPT-4o vision)**
+- GPT-4o inspects the actual image content against the claim
+- Produces image-grounded justifications with specific image IDs
+- Falls back gracefully to heuristic if `OPENAI_API_KEY` is not set
+
+### Risk scoring
+
+Each claim gets a risk score (5–98) based on:
+
+| Factor | Points |
+|---|---|
+| Base | 15 |
+| High severity | +35 |
+| Medium severity | +20 |
+| Contradicted status | +25 |
+| `possible_manipulation` flag | +30 |
+| `text_instruction_present` flag | +25 |
+| `user_history_risk` flag | +15 |
+| `manual_review_required` flag | +10 |
+
+---
+
+## Output schema
+
+Each row in `dataset/output.csv` contains:
+
+| Column | Description |
+|---|---|
+| `user_id` | Submitting user |
+| `image_paths` | Semicolon-separated image paths |
+| `user_claim` | Original conversation transcript |
+| `claim_object` | `car`, `laptop`, or `package` |
+| `evidence_standard_met` | `true` / `false` |
+| `evidence_standard_met_reason` | Short reason |
+| `risk_flags` | Semicolon-separated flags or `none` |
+| `issue_type` | `dent`, `crack`, `scratch`, `glass_shatter`, etc. |
+| `object_part` | `front_bumper`, `screen`, `seal`, etc. |
+| `claim_status` | `supported`, `contradicted`, `not_enough_information` |
+| `claim_status_justification` | Image-grounded explanation |
+| `supporting_image_ids` | `img_1;img_2` or `none` |
+| `valid_image` | `true` / `false` |
+| `severity` | `none`, `low`, `medium`, `high`, `unknown` |
+
+---
+
+## Setup and running
 
 ### Prerequisites
-Make sure you have **Python 3.10+** and `pip` installed on your machine.
 
-### 1. Clone the repository
+- Python 3.10+
+- Tesseract OCR installed on your system ([install guide](https://github.com/UB-Mannheim/tesseract/wiki))
+- An OpenAI API key (only needed for Strategy B / VLM)
+
+### 1. Clone and install
+
 ```bash
-git clone <your-repository-url>
-cd Modern_Enterprise_AI_Dashboard
+git clone https://github.com/bikram73/MultiModal_Damage_Claim_Verification_System.git
+cd MultiModal_Damage_Claim_Verification_System
+pip install -r requirements.txt
 ```
 
-### 2. Install dependencies
-Install the required packages using pip:
-```bash
-pip install fastapi uvicorn pillow opencv-python pytesseract numpy pydantic
+### 2. Set your API key
+
+Create a `.env` file in the project root:
+
 ```
-*(Optional: Install `pytesseract` system binaries for image-to-text OCR check features).*
-
----
-
-## 📖 How to Use
-
-### 1. Run predictions on test dataset
-Process `dataset/claims.csv` and write outputs in the exact required schema to `dataset/output.csv`:
-```bash
-python code/main.py [strategy]
+OPENAI_API_KEY=sk-...your-key-here...
 ```
-*Available strategies:* `heuristic` (default), `vlm`
 
-### 2. Run system evaluations
-Compare strategies against labeled ground truth in `dataset/sample_claims.csv` and output accuracy metrics:
+### 3. Run predictions
+
+```bash
+# Heuristic strategy (no API key needed)
+python code/main.py heuristic
+
+# VLM strategy (requires OPENAI_API_KEY)
+python code/main.py vlm
+```
+
+Output is written to `dataset/output.csv`.
+
+### 4. Run evaluation
+
 ```bash
 python code/evaluation/main.py
 ```
-This generates the full [evaluation_report.md](code/evaluation/evaluation_report.md).
 
-### 3. Launch the dashboard server locally
-Start the local FastAPI development server:
+Compares predictions against `dataset/sample_claims.csv` and writes results to `code/evaluation/evaluation_report.md`.
+
+### 5. Launch the dashboard locally
+
 ```bash
 python code/dashboard_server.py
 ```
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser. You can:
-* Search/filter claims by ID, object, or user.
-* Click rows to dynamically update the images and AI findings details.
-* Switch prediction strategies and execute model runs.
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) — full interactive dashboard with claim browsing, image viewer, AI findings panel, risk scores, and CSV export.
 
 ---
 
-## 🛠️ Technical Details & Implementation Architecture
+## Dashboard features
 
-### 1. Multi-Modal Image Validation Algorithms 📸
-The system uses **OpenCV** and **Pillow** to perform automated checks on the submitted image evidence:
-* **Blurriness Check (Laplacian Variance):** Applies a Laplace kernel filter to calculate the variance of focal sharpness. If the variance is `< 80.0`, the image is flagged as `blurry_image`.
-* **Low-Light / Glare Detection:** Converts images to grayscale and computes the mean luminance. A mean brightness `< 35.0` (out of 255) triggers `low_light_or_glare`.
-* **Prompt Injection Detection (OCR):** Uses `pytesseract` to scan the image for printed notes or text blocks containing instructions such as *"approve the claim"*, *"ignore previous checks"*, or *"override"*. If found, it flags `text_instruction_present` and routes the claim to manual review/contradiction.
-
-### 2. Multi-Variant Claimant Risk Score 📊
-For each claim, a dynamic **Risk Score (5 to 98)** is computed using the following weights:
-* **Base Risk:** `15` points.
-* **Claim Severity:** `+35` for High severity claims, `+20` for Medium severity, `+10` for Low severity.
-* **Verification Status:** `+25` if the visual evidence contradicts the claim conversation; `+10` if evidence is ambiguous or missing.
-* **Risk Flags triggered:**
-  * `possible_manipulation`: `+30` points.
-  * `text_instruction_present`: `+25` points.
-  * `user_history_risk`: `+15` points.
-  * `manual_review_required`: `+10` points.
-
-### 3. Rule-Based Natural Language Processing 🧠
-The parsing engine extracts the target component and damage category from conversation threads using token matching:
-* **Part Extractor:** Maps keywords like *windshield*, *fender*, *hinge*, *trackpad*, *keyboard*, *seal*, *label*, *mirror* directly to standard categories.
-* **Issue Extractor:** Identifies damage families like *dent*, *scratch*, *crack*, *glass_shatter*, *missing_part*, *torn_packaging*, *water_damage*, and *stain*.
+- Browse all 64 claims (44 test + 20 sample) with search and filter
+- Click any claim to see submitted images, verification report, and decision justification
+- Switch between Strategy A and B and re-run the engine live
+- Export filtered predictions as CSV
+- Fully responsive — works on mobile and desktop
+- Static fallback mode for Vercel deployment (no backend required)
 
 ---
 
-## ☁️ GitHub & Vercel Deployment
+## Deployment
 
-ClaimVision AI is pre-configured to be deployed as a static web app on Vercel without requiring a live Python runtime server.
+The dashboard runs in two modes:
 
-### Deploying to GitHub
-1. Initialize Git and add your files:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: implement ClaimVision AI system and dashboard"
-   ```
-2. Link your local repository to GitHub and push:
-   ```bash
-   git branch -M main
-   git remote add origin <your-github-repo-url>
-   git push -u origin main
-   ```
+**Local (FastAPI)** — full backend with live prediction runs via `dashboard_server.py`
 
-### Deploying to Vercel
-1. Log in to [Vercel](https://vercel.com) and click **Add New Project**.
-2. Import your GitHub repository.
-3. Vercel will automatically read `vercel.json` and deploy your dashboard.
-4. The dashboard will auto-detect the cloud environment, load the pre-compiled `claims_data.json` database, and render all metrics, images, and details correctly in the cloud!
+**Vercel (static)** — `vercel.json` routes everything to `index.html`, which auto-detects the cloud environment and loads `code/claims_data.json` instead of hitting the API
 
+To deploy to Vercel, import the GitHub repo at [vercel.com](https://vercel.com) — no extra configuration needed.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python, FastAPI, Uvicorn |
+| Image analysis | OpenCV, Pillow, pytesseract |
+| VLM | OpenAI GPT-4o |
+| Frontend | HTML, Tailwind CSS, vanilla JS |
+| Deployment | Vercel (static), uvicorn (local) |
+| Env management | python-dotenv |
