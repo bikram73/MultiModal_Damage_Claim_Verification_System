@@ -1,8 +1,0 @@
-api/
-*.py
-requirements.txt
-__pycache__/
-.env
-.git
-.vscode
-.qodo
